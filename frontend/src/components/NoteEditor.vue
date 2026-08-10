@@ -51,6 +51,14 @@ function onDraftMounted(el: HTMLTextAreaElement | null, draft: DraftBox) {
     el.focus()
     pendingFocusId.value = null
   }
+  fitBox(el)
+}
+
+/** Grow a textarea to fit its content so multi-line boxes never collapse. */
+function fitBox(el: HTMLTextAreaElement | null) {
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = `${el.scrollHeight}px`
 }
 
 /** Drop every draft that has no (non-whitespace) text — nothing was written. */
@@ -59,9 +67,7 @@ function pruneEmptyDrafts() {
 }
 
 function autoGrow(e: Event) {
-  const el = e.target as HTMLTextAreaElement
-  el.style.height = 'auto'
-  el.style.height = `${el.scrollHeight}px`
+  fitBox(e.target as HTMLTextAreaElement)
 }
 
 // Clicking empty canvas space spawns a draft text box at the cursor position.
@@ -198,6 +204,7 @@ onBeforeUnmount(() => {
           >⠿</span>
           <textarea
             class="text-box"
+            :ref="(el) => fitBox(el as HTMLTextAreaElement | null)"
             :data-box-id="box.id"
             :value="box.text"
             rows="1"
