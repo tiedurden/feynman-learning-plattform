@@ -42,6 +42,24 @@ watch(
   { immediate: true }
 )
 
+// When a notebook is open but no page is selected, auto-open its first page so
+// the editor canvas (click-to-add text boxes) is always available.
+watch(
+  [activeNotebookId, activePageId, pageTree],
+  () => {
+    if (activeNotebookId.value && !activePageId.value) {
+      const first = pageTree.value[0]
+      if (first) {
+        router.replace({
+          name: 'page',
+          params: { id: activeNotebookId.value, pageId: first.id }
+        })
+      }
+    }
+  },
+  { immediate: true }
+)
+
 function selectNotebook(notebookId: string) {
   router.push({ name: 'notebook', params: { id: notebookId } })
 }

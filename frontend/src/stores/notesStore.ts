@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { Notebook, Page, PageNode } from '@/types'
+import type { Notebook, Page, PageNode, TextBox } from '@/types'
 import { seedNotebooks, seedPages } from '@/data/seed'
 
 const STORAGE_KEY = 'onenote-notes:v1'
@@ -9,13 +9,18 @@ interface PersistShape {
   pages: Page[]
 }
 
+/** Ensure every page has a boxes[] array (older persisted data may lack it). */
+function normalizePages(pages: Page[]): Page[] {
+  return pages.map((p) => ({ ...p, boxes: Array.isArray(p.boxes) ? p.boxes : [] }))
+}
+
 function loadState(): PersistShape {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as PersistShape
       if (Array.isArray(parsed.notebooks) && Array.isArray(parsed.pages)) {
-        return parsed
+        return { notebooks: parsed.notebooks, pages: normalizePages(parsed.pages) }
       }
     }
   } catch {
@@ -24,7 +29,7 @@ function loadState(): PersistShape {
   // Fallback to fresh seed data (deep-cloned so we never mutate the source).
   return {
     notebooks: structuredClone(seedNotebooks),
-    pages: structuredClone(seedPages)
+    pages: normalizePages(structuredClone(seedPages))
   }
 }
 
@@ -142,6 +147,7 @@ export const useNotesStore = defineStore('notes', {
         parentId,
         title,
         content: '',
+        boxes: [],
         order
       }
       this.pages.push(page)
@@ -153,6 +159,40 @@ export const useNotesStore = defineStore('notes', {
       const page = this.pages.find((p) => p.id === id)
       if (page) {
         Object.assign(page, patch)
+        this.persist()
+      }
+    },
+
+    // --- Text box CRUD -------------------------------------------------------
+    /** Persist a new (non-empty) text box onto a page. */
+    addTextBox(pageId: string, box: Omit<TextBox, 'id'>): TextBox | undefined {
+      const page = this.pages.find((p) => p.id === pageId)
+      if (!page) return
+      if (!page.boxes) page.boxes = []
+      const tb: TextBox = { id: uid('tb'), ...box }
+      page.boxes.push(tb)
+      this.persist()
+      return tb
+    },
+
+    updateTextBox(
+      pageId: string,
+      boxId: string,
+      patch: Partial<Pick<TextBox, 'text' | 'x' | 'y' | 'width'>>
+    ) {
+      const page = this.pages.find((p) => p.id === pageId)
+      const box = page?.boxes?.find((b) => b.id === boxId)
+      if (box) {
+        Object.assign(box, patch)
+        this.persist()
+      }
+    },
+
+    /** Remove a text box (used when it is emptied out). */
+    removeTextBox(pageId: string, boxId: string) {
+      const page = this.pages.find((p) => p.id === pageId)
+      if (page?.boxes) {
+        page.boxes = page.boxes.filter((b) => b.id !== boxId)
         this.persist()
       }
     },
@@ -192,7 +232,7 @@ export const useNotesStore = defineStore('notes', {
 
     resetToSeed() {
       this.notebooks = structuredClone(seedNotebooks)
-      this.pages = structuredClone(seedPages)
+      this.pages = normalizePages(structuredClone(seedPages))
       this.persist()
     }
   }

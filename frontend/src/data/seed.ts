@@ -19,6 +19,7 @@ export const seedPages: Page[] = [
     parentId: null,
     title: 'Projects',
     content: '# Projects\n\nOverview of active projects.',
+    boxes: [],
     order: 0
   },
   {
@@ -27,6 +28,7 @@ export const seedPages: Page[] = [
     parentId: 'pg-projects',
     title: 'Project Atlas',
     content: '## Project Atlas\n\nGoals, milestones and owners.',
+    boxes: [],
     order: 0
   },
   {
@@ -35,6 +37,7 @@ export const seedPages: Page[] = [
     parentId: 'pg-project-atlas',
     title: 'Kickoff Notes',
     content: '### Kickoff\n\n- Attendees\n- Decisions\n- Action items',
+    boxes: [],
     order: 0
   },
   {
@@ -43,6 +46,7 @@ export const seedPages: Page[] = [
     parentId: 'pg-project-atlas',
     title: 'Retrospective',
     content: '### Retro\n\nWhat went well / what to improve.',
+    boxes: [],
     order: 1
   },
   {
@@ -51,6 +55,7 @@ export const seedPages: Page[] = [
     parentId: 'pg-projects',
     title: 'Project Nova',
     content: '## Project Nova\n\nEarly discovery phase.',
+    boxes: [],
     order: 1
   },
   {
@@ -59,6 +64,7 @@ export const seedPages: Page[] = [
     parentId: null,
     title: 'Meetings',
     content: '# Meetings\n\nRunning meeting log.',
+    boxes: [],
     order: 1
   },
 
@@ -69,6 +75,7 @@ export const seedPages: Page[] = [
     parentId: null,
     title: 'Groceries',
     content: '# Groceries\n\n- Milk\n- Coffee\n- Bread',
+    boxes: [],
     order: 0
   },
   {
@@ -77,6 +84,7 @@ export const seedPages: Page[] = [
     parentId: null,
     title: 'Travel',
     content: '# Travel\n\nTrip ideas and bookings.',
+    boxes: [],
     order: 1
   },
   {
@@ -85,6 +93,7 @@ export const seedPages: Page[] = [
     parentId: 'pg-travel',
     title: 'Japan 2026',
     content: '## Japan 2026\n\nItinerary draft.',
+    boxes: [],
     order: 0
   },
 
@@ -95,6 +104,7 @@ export const seedPages: Page[] = [
     parentId: null,
     title: 'Feynman Technique',
     content: '# Feynman Technique\n\n1. Pick a concept\n2. Teach it simply\n3. Identify gaps\n4. Review & simplify',
+    boxes: [],
     order: 0
   }
 ]

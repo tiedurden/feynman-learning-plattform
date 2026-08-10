@@ -19,6 +19,23 @@ export interface Notebook {
   color: string
 }
 
+/**
+ * A free-floating text box placed on the page canvas (OneNote style).
+ * Position is stored in pixels relative to the top-left of the canvas.
+ * Empty boxes are never persisted — they live only as local drafts until
+ * the user types something into them.
+ */
+export interface TextBox {
+  id: string
+  /** Horizontal offset in px from the canvas left edge. */
+  x: number
+  /** Vertical offset in px from the canvas top edge. */
+  y: number
+  text: string
+  /** Optional authored width in px (auto if omitted). */
+  width?: number
+}
+
 export interface Page {
   id: string
   notebookId: string
@@ -27,6 +44,8 @@ export interface Page {
   title: string
   /** Editor body (plain text / HTML depending on editor implementation). */
   content: string
+  /** Free-positioned text boxes placed on the page canvas. */
+  boxes: TextBox[]
   /** Sort order among siblings. */
   order: number
 }
