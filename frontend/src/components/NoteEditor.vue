@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { Page, TextBox } from '@/types'
 import { useNotesStore } from '@/stores/notesStore'
 import TextBoxItem from './TextBoxItem.vue'
@@ -54,13 +54,21 @@ function onCanvasMousedown(e: MouseEvent) {
   if (!props.page) return
   // Ignore clicks that land inside an existing box (or its drag handle).
   if ((e.target as HTMLElement).closest('.box-wrap')) return
+  // Prevent the browser's default mousedown focus change; otherwise it would
+  // steal focus from the box we are about to create and focus, causing an
+  // immediate blur that discards the empty draft.
+  e.preventDefault()
+  const canvas = e.currentTarget as HTMLElement
   // Any previously created but still-empty box is discarded before adding a new one.
   pruneEmptyDrafts()
-  const rect = canvasRef.value!.getBoundingClientRect()
-  const x = e.clientX - rect.left + canvasRef.value!.scrollLeft
-  const y = e.clientY - rect.top + canvasRef.value!.scrollTop
-  const draft: DraftBox = { id: localId(), x, y, text: '', draft: true }
-  drafts.value.push(draft)
+  const rect = canvas.getBoundingClientRect()
+  const x = e.clientX - rect.left + canvas.scrollLeft
+  const y = e.clientY - rect.top + canvas.scrollTop
+  drafts.value.push({ id: localId(), x, y, text: '', draft: true })
+}
+
+function onDraftText(draft: DraftBox, value: string) {
+  draft.text = value
 }
 
 function onDraftBlur(draft: DraftBox) {
@@ -119,30 +127,6 @@ function onDragUp() {
   window.removeEventListener('mousemove', onDragMove)
   window.removeEventListener('mouseup', onDragUp)
 }
-
-// Safety net: a pointer-down anywhere that is NOT inside a text box removes any
-// still-empty draft (covers clicks in other panes / outside the canvas). The
-// canvas's own handler prunes-then-creates, so this won't kill a brand-new box.
-function onDocPointerDown(e: MouseEvent) {
-  if ((e.target as HTMLElement).closest('.text-box')) return
-  if ((e.target as HTMLElement).closest('.canvas')) return
-  pruneEmptyDrafts()
-}
-
-// Clicking outside the browser window (losing focus) also discards empty drafts.
-function onWindowBlur() {
-  pruneEmptyDrafts()
-}
-
-onMounted(() => {
-  document.addEventListener('mousedown', onDocPointerDown)
-  window.addEventListener('blur', onWindowBlur)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('mousedown', onDocPointerDown)
-  window.removeEventListener('blur', onWindowBlur)
-})
 </script>
 
 <template>
@@ -186,7 +170,7 @@ onBeforeUnmount(() => {
           :text="draft.text"
           is-draft
           focus-on-mount
-          @update:text="draft.text = $event"
+          @update:text="onDraftText(draft, $event)"
           @blur="onDraftBlur(draft)"
         />
       </div>
@@ -250,6 +234,7 @@ onBeforeUnmount(() => {
   pointer-events: none;
   user-select: none;
 }
+
 
 .placeholder {
   flex: 1;
