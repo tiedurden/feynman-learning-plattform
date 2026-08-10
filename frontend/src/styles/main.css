@@ -1,0 +1,53 @@
+:root {
+  --nb-purple: #7719aa;
+  --sidebar-bg: #f3f2f1;
+  --sidebar-border: #e1dfdd;
+  --pane-bg: #faf9f8;
+  --editor-bg: #ffffff;
+  --text: #201f1e;
+  --text-muted: #605e5c;
+  --accent: #7719aa;
+  --hover: #edebe9;
+  --active: #e1dfff;
+  --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--editor-bg);
+  font-size: 14px;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* Thin OneNote-like scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c8c6c4;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a19f9d;
+  background-clip: content-box;
+}
+
