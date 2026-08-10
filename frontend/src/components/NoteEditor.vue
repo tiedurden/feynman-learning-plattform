@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Page, TextBox } from '@/types'
 import { useNotesStore } from '@/stores/notesStore'
 
@@ -53,6 +53,11 @@ function onDraftMounted(el: HTMLTextAreaElement | null, draft: DraftBox) {
   }
 }
 
+/** Drop every draft that has no (non-whitespace) text — nothing was written. */
+function pruneEmptyDrafts() {
+  drafts.value = drafts.value.filter((d) => d.text.trim().length > 0)
+}
+
 function autoGrow(e: Event) {
   const el = e.target as HTMLTextAreaElement
   el.style.height = 'auto'
@@ -64,6 +69,8 @@ function onCanvasMousedown(e: MouseEvent) {
   if (!props.page) return
   // Ignore clicks that land inside an existing box (or its drag handle).
   if ((e.target as HTMLElement).closest('.box-wrap')) return
+  // Any previously created but still-empty box is discarded before adding a new one.
+  pruneEmptyDrafts()
   const rect = canvasRef.value!.getBoundingClientRect()
   const x = e.clientX - rect.left + canvasRef.value!.scrollLeft
   const y = e.clientY - rect.top + canvasRef.value!.scrollTop
@@ -132,6 +139,30 @@ function onDragUp() {
   window.removeEventListener('mousemove', onDragMove)
   window.removeEventListener('mouseup', onDragUp)
 }
+
+// Safety net: a pointer-down anywhere that is NOT inside a text box removes any
+// still-empty draft (covers clicks in other panes / outside the canvas). The
+// canvas's own handler prunes-then-creates, so this won't kill a brand-new box.
+function onDocPointerDown(e: MouseEvent) {
+  if ((e.target as HTMLElement).closest('.text-box')) return
+  if ((e.target as HTMLElement).closest('.canvas')) return
+  pruneEmptyDrafts()
+}
+
+// Clicking outside the browser window (losing focus) also discards empty drafts.
+function onWindowBlur() {
+  pruneEmptyDrafts()
+}
+
+onMounted(() => {
+  document.addEventListener('mousedown', onDocPointerDown)
+  window.addEventListener('blur', onWindowBlur)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', onDocPointerDown)
+  window.removeEventListener('blur', onWindowBlur)
+})
 </script>
 
 <template>
