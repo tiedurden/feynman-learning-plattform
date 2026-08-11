@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { PageNode } from '@/types'
+import ProgressBadge from './ProgressBadge.vue'
+import { getProgress } from '@/utils/progress'
 
 const props = defineProps<{
   node: PageNode
   depth: number
   activePageId?: string
+  showProgress?: boolean
 }>()
 
 // Recursive components must self-reference by name for the template compiler.
@@ -45,6 +48,12 @@ function toggle(event: MouseEvent) {
       <span class="page-icon">📄</span>
       <span class="label">{{ node.title || 'Untitled' }}</span>
 
+      <ProgressBadge
+        v-if="showProgress"
+        class="progress"
+        :value="getProgress(node.id)"
+      />
+
       <span class="actions">
         <button
           class="mini"
@@ -70,6 +79,7 @@ function toggle(event: MouseEvent) {
         :node="child"
         :depth="depth + 1"
         :active-page-id="activePageId"
+        :show-progress="showProgress"
         @select="(id) => emit('select', id)"
         @add-child="(id) => emit('add-child', id)"
         @delete="(id) => emit('delete', id)"
@@ -129,6 +139,10 @@ function toggle(event: MouseEvent) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.progress {
+  margin: 0 4px;
 }
 
 .actions {

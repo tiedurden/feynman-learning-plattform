@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { Notebook, PageNode } from '@/types'
 import PageTreeItem from './PageTreeItem.vue'
+import ToggleSwitch from './ToggleSwitch.vue'
 
 defineProps<{
   notebook?: Notebook
@@ -14,6 +16,9 @@ const emit = defineEmits<{
   (e: 'add-child', parentId: string): void
   (e: 'delete', id: string): void
 }>()
+
+// --- Progress display toggle ----------------------------------------------
+const showProgress = ref(false)
 </script>
 
 <template>
@@ -38,12 +43,17 @@ const emit = defineEmits<{
           :node="node"
           :depth="0"
           :active-page-id="activePageId"
+          :show-progress="showProgress"
           @select="(id) => emit('select', id)"
           @add-child="(id) => emit('add-child', id)"
           @delete="(id) => emit('delete', id)"
         />
       </ul>
       <p v-else class="empty">No pages yet. Click ＋ to create one.</p>
+    </div>
+
+    <div class="footer">
+      <ToggleSwitch v-model="showProgress" label="Show progress" tone="light" />
     </div>
   </section>
 </template>
@@ -97,6 +107,7 @@ const emit = defineEmits<{
 .tree-scroll {
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
   padding: 6px 0;
 }
 
@@ -111,6 +122,11 @@ const emit = defineEmits<{
   font-size: 13px;
   padding: 16px;
   text-align: center;
+}
+
+.footer {
+  padding: 8px 12px;
+  border-top: 1px solid var(--sidebar-border);
 }
 </style>
 

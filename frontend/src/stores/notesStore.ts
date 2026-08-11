@@ -3,6 +3,8 @@ import type { Notebook, Page, PageNode, TextBox } from '@/types'
 import { seedNotebooks, seedPages } from '@/data/seed'
 
 const STORAGE_KEY = 'onenote-notes:v1'
+/** Separate key for lightweight UI preferences (progress toggle, etc.). */
+const UI_STORAGE_KEY = 'onenote-ui:v1'
 
 interface PersistShape {
   notebooks: Notebook[]
@@ -12,6 +14,20 @@ interface PersistShape {
 /** Ensure every page has a boxes[] array (older persisted data may lack it). */
 function normalizePages(pages: Page[]): Page[] {
   return pages.map((p) => ({ ...p, boxes: Array.isArray(p.boxes) ? p.boxes : [] }))
+}
+
+/** Load persisted UI preferences (best-effort). */
+function loadShowProgress(): boolean {
+  try {
+    const raw = localStorage.getItem(UI_STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as { showProgress?: boolean }
+      return parsed.showProgress === true
+    }
+  } catch {
+    /* ignore malformed storage */
+  }
+  return false
 }
 
 function loadState(): PersistShape {
@@ -40,12 +56,14 @@ function uid(prefix: string): string {
 interface State {
   notebooks: Notebook[]
   pages: Page[]
+  /** Global toggle: show completion progress badges across all sidebars. */
+  showProgress: boolean
 }
 
 export const useNotesStore = defineStore('notes', {
   state: (): State => {
     const { notebooks, pages } = loadState()
-    return { notebooks, pages }
+    return { notebooks, pages, showProgress: loadShowProgress() }
   },
 
   getters: {
@@ -105,6 +123,20 @@ export const useNotesStore = defineStore('notes', {
         localStorage.setItem(
           STORAGE_KEY,
           JSON.stringify({ notebooks: this.notebooks, pages: this.pages })
+        )
+      } catch {
+        /* storage might be unavailable — non-fatal */
+      }
+    },
+
+    // --- UI preferences ------------------------------------------------------
+    /** Toggle (or explicitly set) the global progress display. */
+    setShowProgress(value?: boolean) {
+      this.showProgress = value ?? !this.showProgress
+      try {
+        localStorage.setItem(
+          UI_STORAGE_KEY,
+          JSON.stringify({ showProgress: this.showProgress })
         )
       } catch {
         /* storage might be unavailable — non-fatal */
