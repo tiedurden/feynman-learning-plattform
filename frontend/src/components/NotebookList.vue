@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import type { Notebook } from '@/types'
+import ConfirmDialog from './ConfirmDialog.vue'
 
-defineProps<{
+const props = defineProps<{
   notebooks: Notebook[]
   activeId?: string
 }>()
@@ -39,10 +40,23 @@ function cancelRename() {
   editingId.value = null
 }
 
-function confirmDelete(nb: Notebook) {
-  if (window.confirm(`Delete "${nb.title}" and all its pages?`)) {
-    emit('delete', nb.id)
-  }
+// --- Delete confirmation state ---------------------------------------------
+const pendingDeleteId = ref<string | null>(null)
+const pendingDelete = computed(() =>
+  props.notebooks.find((n) => n.id === pendingDeleteId.value)
+)
+
+function requestDelete(nb: Notebook) {
+  pendingDeleteId.value = nb.id
+}
+
+function confirmDelete() {
+  if (pendingDeleteId.value) emit('delete', pendingDeleteId.value)
+  pendingDeleteId.value = null
+}
+
+function cancelDelete() {
+  pendingDeleteId.value = null
 }
 </script>
 
@@ -87,13 +101,28 @@ function confirmDelete(nb: Notebook) {
           <button
             class="mini danger"
             title="Delete notebook"
-            @click.stop="confirmDelete(nb)"
+            @click.stop="requestDelete(nb)"
           >
             🗑
           </button>
         </span>
       </li>
     </ul>
+
+    <ConfirmDialog
+      :open="pendingDelete != null"
+      title="Delete notebook?"
+      :message="
+        pendingDelete
+          ? `“${pendingDelete.title}” and all its pages will be permanently deleted. This can’t be undone.`
+          : ''
+      "
+      confirm-label="Delete"
+      cancel-label="Cancel"
+      danger
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </aside>
 </template>
 
