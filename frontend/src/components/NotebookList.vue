@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { nextTick, ref } from 'vue'
 import type { Notebook } from '@/types'
 
 defineProps<{
@@ -9,7 +10,40 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'select', id: string): void
   (e: 'add'): void
+  (e: 'rename', id: string, title: string): void
+  (e: 'delete', id: string): void
 }>()
+
+// --- Inline rename state ---------------------------------------------------
+const editingId = ref<string | null>(null)
+const draftTitle = ref('')
+const inputEl = ref<HTMLInputElement | null>(null)
+
+async function startRename(nb: Notebook) {
+  editingId.value = nb.id
+  draftTitle.value = nb.title
+  await nextTick()
+  inputEl.value?.focus()
+  inputEl.value?.select()
+}
+
+function commitRename(nb: Notebook) {
+  if (editingId.value !== nb.id) return
+  const next = draftTitle.value.trim()
+  // Ignore blank input — keep the previous title.
+  if (next && next !== nb.title) emit('rename', nb.id, next)
+  editingId.value = null
+}
+
+function cancelRename() {
+  editingId.value = null
+}
+
+function confirmDelete(nb: Notebook) {
+  if (window.confirm(`Delete "${nb.title}" and all its pages?`)) {
+    emit('delete', nb.id)
+  }
+}
 </script>
 
 <template>
@@ -26,9 +60,38 @@ const emit = defineEmits<{
         class="item"
         :class="{ active: nb.id === activeId }"
         @click="emit('select', nb.id)"
+        @dblclick="startRename(nb)"
       >
         <span class="swatch" :style="{ background: nb.color }" />
-        <span class="title">{{ nb.title }}</span>
+
+        <input
+          v-if="editingId === nb.id"
+          ref="inputEl"
+          v-model="draftTitle"
+          class="rename-input"
+          @click.stop
+          @keyup.enter="commitRename(nb)"
+          @keyup.esc="cancelRename"
+          @blur="commitRename(nb)"
+        />
+        <span v-else class="title">{{ nb.title }}</span>
+
+        <span v-if="editingId !== nb.id" class="actions">
+          <button
+            class="mini"
+            title="Rename notebook"
+            @click.stop="startRename(nb)"
+          >
+            ✏
+          </button>
+          <button
+            class="mini danger"
+            title="Delete notebook"
+            @click.stop="confirmDelete(nb)"
+          >
+            🗑
+          </button>
+        </span>
       </li>
     </ul>
   </aside>
@@ -91,6 +154,9 @@ const emit = defineEmits<{
 .item:hover {
   background: rgba(255, 255, 255, 0.12);
 }
+.item:hover .actions {
+  opacity: 1;
+}
 .item.active {
   background: rgba(255, 255, 255, 0.22);
   border-left-color: #fff;
@@ -109,6 +175,43 @@ const emit = defineEmits<{
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.rename-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 3px;
+  padding: 2px 6px;
+  outline: none;
+}
+
+.actions {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.mini {
+  background: none;
+  border: none;
+  font-size: 12px;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.85);
+}
+.mini:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+.mini.danger:hover {
+  color: #ffb3b3;
 }
 </style>
 

@@ -77,6 +77,23 @@ function addNotebook() {
   selectNotebook(nb.id)
 }
 
+function renameNotebook(notebookId: string, title: string) {
+  store.renameNotebook(notebookId, title)
+}
+
+function deleteNotebook(notebookId: string) {
+  const wasActive = activeNotebookId.value === notebookId
+  store.deleteNotebook(notebookId)
+  if (wasActive) {
+    const next = store.notebooks[0]
+    if (next) {
+      router.replace({ name: 'notebook', params: { id: next.id } })
+    } else {
+      router.replace({ name: 'home' })
+    }
+  }
+}
+
 function addRootPage() {
   if (!activeNotebookId.value) return
   const page = store.addPage(activeNotebookId.value, null)
@@ -105,6 +122,8 @@ function deletePage(pageId: string) {
       :active-id="activeNotebookId"
       @select="selectNotebook"
       @add="addNotebook"
+      @rename="renameNotebook"
+      @delete="deleteNotebook"
     />
 
     <!-- Pane 2: Page tree -->
