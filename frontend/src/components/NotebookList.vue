@@ -2,11 +2,17 @@
 import { computed, nextTick, ref } from 'vue'
 import type { Notebook } from '@/types'
 import ConfirmDialog from './ConfirmDialog.vue'
+import ProgressBadge from './ProgressBadge.vue'
+import ToggleSwitch from './ToggleSwitch.vue'
+import { getProgress } from '@/utils/progress'
 
 const props = defineProps<{
   notebooks: Notebook[]
   activeId?: string
 }>()
+
+// --- Progress display toggle ----------------------------------------------
+const showProgress = ref(false)
 
 const emit = defineEmits<{
   (e: 'select', id: string): void
@@ -96,6 +102,12 @@ function cancelDelete() {
         />
         <span v-else class="title">{{ nb.title }}</span>
 
+        <ProgressBadge
+          v-if="showProgress && editingId !== nb.id"
+          class="progress"
+          :value="getProgress(nb.id)"
+        />
+
         <span v-if="editingId !== nb.id" class="actions">
           <button
             class="mini"
@@ -129,6 +141,10 @@ function cancelDelete() {
       @confirm="confirmDelete"
       @cancel="cancelDelete"
     />
+
+    <div class="footer">
+      <ToggleSwitch v-model="showProgress" label="Show progress" tone="dark" />
+    </div>
   </aside>
 </template>
 
@@ -138,7 +154,7 @@ function cancelDelete() {
   color: #fff;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .header {
@@ -176,6 +192,9 @@ function cancelDelete() {
   list-style: none;
   margin: 0;
   padding: 4px 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .item {
@@ -247,6 +266,16 @@ function cancelDelete() {
 }
 .mini.danger:hover {
   color: #ffb3b3;
+}
+
+.progress {
+  margin-left: 4px;
+}
+
+.footer {
+  margin-top: auto;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
 }
 </style>
 

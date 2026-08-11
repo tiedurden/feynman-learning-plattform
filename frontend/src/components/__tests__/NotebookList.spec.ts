@@ -130,5 +130,20 @@ describe('NotebookList', () => {
     expect(wrapper.findComponent(ConfirmDialog).props('open')).toBe(false)
     wrapper.unmount()
   })
+
+  // --- Progress -----------------------------------------------------------
+  it('hides progress badges by default', () => {
+    const wrapper = mountList()
+    expect(wrapper.findAll('.progress-badge')).toHaveLength(0)
+    wrapper.unmount()
+  })
+
+  it('shows a progress badge per notebook when the toggle is enabled', async () => {
+    const wrapper = mountList()
+    // The footer control is a switch (role="switch" button), not a checkbox.
+    await wrapper.get('.footer .switch').trigger('click')
+    expect(wrapper.findAll('.progress-badge')).toHaveLength(2)
+    wrapper.unmount()
+  })
 })
 
