@@ -20,6 +20,12 @@ const editingId = ref<string | null>(null)
 const draftTitle = ref('')
 const inputEl = ref<HTMLInputElement | null>(null)
 
+// The rename input lives inside a v-for, so a string template ref would be
+// collected into an array. Use a function ref to capture the single element.
+function setInputRef(el: Element | null) {
+  inputEl.value = (el as HTMLInputElement) ?? null
+}
+
 async function startRename(nb: Notebook) {
   editingId.value = nb.id
   draftTitle.value = nb.title
@@ -80,7 +86,7 @@ function cancelDelete() {
 
         <input
           v-if="editingId === nb.id"
-          ref="inputEl"
+          :ref="setInputRef"
           v-model="draftTitle"
           class="rename-input"
           @click.stop

@@ -21,6 +21,41 @@ describe('notesStore — happy paths', () => {
     )
   })
 
+  it('renames a notebook', () => {
+    const store = useNotesStore()
+    const nb = store.addNotebook('Old Name')
+
+    store.renameNotebook(nb.id, 'New Name')
+
+    expect(store.notebookById(nb.id)!.title).toBe('New Name')
+  })
+
+  it('ignores rename for an unknown notebook id', () => {
+    const store = useNotesStore()
+    const nb = store.addNotebook('Keep')
+
+    store.renameNotebook('does-not-exist', 'Nope')
+
+    expect(store.notebookById(nb.id)!.title).toBe('Keep')
+  })
+
+  it('deletes a notebook and cascades its pages', () => {
+    const store = useNotesStore()
+    const nb = store.addNotebook('Doomed')
+    const root = store.addPage(nb.id, null, 'Root')
+    store.addPage(nb.id, root.id, 'Child')
+    const other = store.addNotebook('Survivor')
+    const keptPage = store.addPage(other.id, null, 'Kept')
+
+    store.deleteNotebook(nb.id)
+
+    expect(store.notebookById(nb.id)).toBeUndefined()
+    expect(store.pagesByNotebook(nb.id)).toHaveLength(0)
+    // Unrelated notebook and its pages are untouched.
+    expect(store.notebookById(other.id)).toBeDefined()
+    expect(store.pageById(keptPage.id)).toBeDefined()
+  })
+
   it('adds a page initialized with an empty boxes array', () => {
     const store = useNotesStore()
     const nb = store.addNotebook('NB')
