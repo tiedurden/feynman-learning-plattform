@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
+import type { ComponentPublicInstance } from 'vue'
 import type { Notebook } from '@/types'
 import ConfirmDialog from './ConfirmDialog.vue'
 import ProgressBadge from './ProgressBadge.vue'
@@ -28,7 +29,8 @@ const inputEl = ref<HTMLInputElement | null>(null)
 
 // The rename input lives inside a v-for, so a string template ref would be
 // collected into an array. Use a function ref to capture the single element.
-function setInputRef(el: Element | null) {
+// The callback signature must match Vue's VNodeRef (Element | component | null).
+function setInputRef(el: Element | ComponentPublicInstance | null) {
   inputEl.value = (el as HTMLInputElement) ?? null
 }
 
