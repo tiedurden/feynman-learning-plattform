@@ -4,11 +4,13 @@
  * ─────────────────────────────────────────────────────────────────────────
  * BACKEND SEAM
  * ─────────────────────────────────────────────────────────────────────────
- * For now, per-entity progress values are hard-coded constants in the
- * `PROGRESS_CONSTANTS` map below. Later this will be replaced by a backend
- * API call: the BE will evaluate each notebook/page (with help from an LLM
- * model) and return a completion percentage. When that lands, swap the body
- * of `getProgress` for the API-backed lookup and delete the constants map.
+ * Progress values are now provided by the Spring Boot backend, which asks an
+ * LLM (or a deterministic offline heuristic) to grade how well each notebook /
+ * page topic appears to be understood — following the Feynman technique.
+ *
+ * The backend result is cached in-module via `setProgress` / `setProgresses`
+ * (populated by `useProgressStore`), so the widely-used `getProgress(id)`
+ * accessor stays synchronous for templates.
  *
  * Color thresholds are centralized here so they can be made user-customizable
  * later without touching the components.
@@ -42,46 +44,64 @@ export function progressLevel(
 }
 
 /**
- * Placeholder progress values keyed by notebook / page id.
- *
- * These are the "random constants" stand-ins until the backend provides real
- * LLM-evaluated progress. Ids match the seed data in `@/data/seed`.
- *
- * TODO(BE): Replace this map + `getProgress` with an API call.
+ * In-memory cache of backend-evaluated scores, keyed by notebook / page id.
+ * Populated by `useProgressStore.evaluate()` after calling the backend.
  */
-export const PROGRESS_CONSTANTS: Record<string, number> = {
-  // --- Notebooks ---
-  'nb-work': 62,
-  'nb-personal': 28,
-  'nb-study': 81,
-  // --- Work pages ---
-  'pg-projects': 55,
-  'pg-project-atlas': 74,
-  'pg-atlas-kickoff': 90,
-  'pg-atlas-retro': 40,
-  'pg-project-nova': 18,
-  'pg-meetings': 66,
-  // --- Personal pages ---
-  'pg-groceries': 100,
-  'pg-travel': 45,
-  'pg-travel-japan': 30,
-  // --- Study pages ---
-  'pg-feynman': 77
+const scoreCache: Record<string, number> = {}
+
+/**
+ * Fallback percent for ids the backend has not evaluated yet (e.g. a newly
+ * created notebook/page, or before the first evaluation completes).
+ */
+export const DEFAULT_PROGRESS = 0
+
+/** Clamp a raw value into the valid 0–100 progress range. */
+function clamp(value: number): number {
+  if (Number.isNaN(value)) return DEFAULT_PROGRESS
+  return Math.max(0, Math.min(100, Math.round(value)))
+}
+
+/** Store a single backend-evaluated score. */
+export function setProgress(id: string, value: number): void {
+  scoreCache[id] = clamp(value)
+}
+
+/** Bulk-store backend-evaluated scores (id → percent). */
+export function setProgresses(scores: Record<string, number>): void {
+  for (const [id, value] of Object.entries(scores)) {
+    scoreCache[id] = clamp(value)
+  }
 }
 
 /**
- * Fallback percent for ids not present in the constants map (e.g. newly
- * created notebooks/pages before the BE has evaluated them).
+ * Merge backend evaluation results into the progress cache.
+ *
+ * Accepts the `{ score, understandingNotes }` shape returned by the backend
+ * (see `evaluationApi.ts`), so callers can pass `pageScores` / `notebookScores`
+ * directly.
  */
-export const DEFAULT_PROGRESS = 0
+export function setLiveScores(
+  scores: Record<string, { score: number; understandingNotes?: string }>
+): void {
+  for (const [id, entry] of Object.entries(scores)) {
+    if (entry && typeof entry.score === 'number') {
+      scoreCache[id] = clamp(entry.score)
+    }
+  }
+}
+
+/** Clear all cached scores (e.g. on reset-to-seed). */
+export function clearProgress(): void {
+  for (const key of Object.keys(scoreCache)) delete scoreCache[key]
+}
 
 /**
  * Return the progress percent (0–100) for a notebook or page id.
  *
- * TODO(BE): Replace the constants lookup with the backend/LLM-provided value
- * once the evaluation API exists.
+ * Reads from the backend-populated cache; returns `DEFAULT_PROGRESS` for ids
+ * that have not been evaluated yet.
  */
 export function getProgress(id: string): number {
-  return PROGRESS_CONSTANTS[id] ?? DEFAULT_PROGRESS
+  return scoreCache[id] ?? DEFAULT_PROGRESS
 }
 

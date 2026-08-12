@@ -2,6 +2,7 @@
 import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useNotesStore } from '@/stores/notesStore'
+import { useProgressStore } from '@/stores/progressStore'
 import NotebookList from './NotebookList.vue'
 import PageTree from './PageTree.vue'
 import NoteEditor from './NoteEditor.vue'
@@ -12,6 +13,7 @@ const props = defineProps<{
 }>()
 
 const store = useNotesStore()
+const progress = useProgressStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -112,44 +114,197 @@ function deletePage(pageId: string) {
     router.replace({ name: 'notebook', params: { id: activeNotebookId.value } })
   }
 }
+
+/** Evaluate only the currently active notebook. */
+function evaluateActiveNotebook() {
+  if (!activeNotebookId.value) return
+  // Ensure progress badges are visible so the user sees the result.
+  store.setShowProgress(true)
+  progress.evaluate(activeNotebookId.value)
+}
+
+/** Evaluate every notebook in one request. */
+function evaluateAll() {
+  store.setShowProgress(true)
+  progress.evaluate()
+}
 </script>
 
 <template>
-  <div class="app-layout">
-    <!-- Pane 1: Notebooks -->
-    <NotebookList
-      :notebooks="store.notebooks"
-      :active-id="activeNotebookId"
-      @select="selectNotebook"
-      @add="addNotebook"
-      @rename="renameNotebook"
-      @delete="deleteNotebook"
-    />
+  <div class="app-shell">
+    <!-- Top toolbar: Feynman evaluation controls -->
+    <header class="toolbar">
+      <div class="toolbar-title">
+        <span class="brand">🧠 Feynman</span>
+        <span v-if="activeNotebook" class="active-nb">{{ activeNotebook.title }}</span>
+      </div>
 
-    <!-- Pane 2: Page tree -->
-    <PageTree
-      :notebook="activeNotebook"
-      :tree="pageTree"
-      :active-page-id="activePageId"
-      @select="selectPage"
-      @add-root="addRootPage"
-      @add-child="addChildPage"
-      @delete="deletePage"
-    />
+      <div class="toolbar-actions">
+        <span v-if="progress.error" class="eval-error" role="alert">
+          ⚠️ {{ progress.error }}
+        </span>
+        <span
+          v-else-if="progress.lastEvaluatedAt"
+          class="eval-status"
+        >
+          Evaluated ✓
+        </span>
 
-    <!-- Pane 3: Editor -->
-    <NoteEditor
-      :page="activePage"
-      @update="(patch) => activePage && store.updatePage(activePage.id, patch)"
-    />
+        <button
+          class="btn"
+          :disabled="progress.loading || !activeNotebook"
+          @click="evaluateActiveNotebook"
+        >
+          <span v-if="progress.loading" class="spinner" aria-hidden="true"></span>
+          {{ progress.loading ? 'Evaluating…' : 'Evaluate Notebook' }}
+        </button>
+
+        <button
+          class="btn btn-secondary"
+          :disabled="progress.loading || store.notebooks.length === 0"
+          @click="evaluateAll"
+        >
+          Evaluate All
+        </button>
+      </div>
+    </header>
+
+    <!-- Three-pane workspace -->
+    <div class="app-layout">
+      <!-- Pane 1: Notebooks -->
+      <NotebookList
+        :notebooks="store.notebooks"
+        :active-id="activeNotebookId"
+        @select="selectNotebook"
+        @add="addNotebook"
+        @rename="renameNotebook"
+        @delete="deleteNotebook"
+      />
+
+      <!-- Pane 2: Page tree -->
+      <PageTree
+        :notebook="activeNotebook"
+        :tree="pageTree"
+        :active-page-id="activePageId"
+        @select="selectPage"
+        @add-root="addRootPage"
+        @add-child="addChildPage"
+        @delete="deletePage"
+      />
+
+      <!-- Pane 3: Editor -->
+      <NoteEditor
+        :page="activePage"
+        @update="(patch) => activePage && store.updatePage(activePage.id, patch)"
+      />
+    </div>
   </div>
 </template>
 
 <style scoped>
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 16px;
+  background: var(--sidebar-bg, #faf9f8);
+  border-bottom: 1px solid var(--sidebar-border, #e1dfdd);
+  flex: 0 0 auto;
+}
+
+.toolbar-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.brand {
+  font-weight: 700;
+  color: var(--text, #201f1e);
+}
+.active-nb {
+  color: var(--text-muted, #605e5c);
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.eval-error {
+  color: #a4262c;
+  font-size: 13px;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.eval-status {
+  color: #0a7c42;
+  font-size: 13px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  background: #7719aa;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.btn:hover:not(:disabled) {
+  background: #660f95;
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.btn-secondary {
+  background: transparent;
+  color: #7719aa;
+  border-color: #c8b6d6;
+}
+.btn-secondary:hover:not(:disabled) {
+  background: #f3ecf8;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .app-layout {
   display: grid;
   grid-template-columns: 220px 300px 1fr;
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden;
 }
 

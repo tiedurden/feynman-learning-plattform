@@ -12,7 +12,14 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    open: true
+    open: true,
+    // Forward API calls to the Spring Boot backend during development.
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      }
+    }
   }
 })
 
