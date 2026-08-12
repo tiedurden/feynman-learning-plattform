@@ -50,6 +50,12 @@ export function progressLevel(
 const scoreCache: Record<string, number> = {}
 
 /**
+ * In-memory cache of the LLM's short "understanding notes" per id, shown as a
+ * tooltip on the progress badge so users can see WHY a topic scored as it did.
+ */
+const notesCache: Record<string, string> = {}
+
+/**
  * Fallback percent for ids the backend has not evaluated yet (e.g. a newly
  * created notebook/page, or before the first evaluation completes).
  */
@@ -86,6 +92,9 @@ export function setLiveScores(
   for (const [id, entry] of Object.entries(scores)) {
     if (entry && typeof entry.score === 'number') {
       scoreCache[id] = clamp(entry.score)
+      if (entry.understandingNotes) {
+        notesCache[id] = entry.understandingNotes
+      }
     }
   }
 }
@@ -93,6 +102,7 @@ export function setLiveScores(
 /** Clear all cached scores (e.g. on reset-to-seed). */
 export function clearProgress(): void {
   for (const key of Object.keys(scoreCache)) delete scoreCache[key]
+  for (const key of Object.keys(notesCache)) delete notesCache[key]
 }
 
 /**
@@ -103,5 +113,13 @@ export function clearProgress(): void {
  */
 export function getProgress(id: string): number {
   return scoreCache[id] ?? DEFAULT_PROGRESS
+}
+
+/**
+ * Return the LLM's understanding notes for an id, or an empty string if the id
+ * has not been evaluated (or the backend returned no notes).
+ */
+export function getUnderstandingNotes(id: string): string {
+  return notesCache[id] ?? ''
 }
 

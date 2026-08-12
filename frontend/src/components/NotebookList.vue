@@ -5,7 +5,7 @@ import type { Notebook } from '@/types'
 import ConfirmDialog from './ConfirmDialog.vue'
 import ProgressBadge from './ProgressBadge.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
-import { getProgress } from '@/utils/progress'
+import { getProgress, getUnderstandingNotes } from '@/utils/progress'
 
 const props = defineProps<{
   notebooks: Notebook[]
@@ -108,6 +108,7 @@ function cancelDelete() {
           v-if="showProgress && editingId !== nb.id"
           class="progress"
           :value="getProgress(nb.id)"
+          :notes="getUnderstandingNotes(nb.id)"
         />
 
         <span v-if="editingId !== nb.id" class="actions">
