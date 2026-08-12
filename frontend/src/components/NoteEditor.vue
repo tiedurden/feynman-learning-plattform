@@ -138,7 +138,6 @@ function onDragUp() {
         placeholder="Untitled Page"
         spellcheck="false"
       />
-      <div class="meta">Click anywhere below to add a text box</div>
 
       <div
         ref="canvasRef"
@@ -191,7 +190,7 @@ function onDragUp() {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 32px 48px;
+  padding: 30px 10px;
 }
 
 .title-input {
@@ -202,6 +201,7 @@ function onDragUp() {
   color: var(--text);
   padding: 0 0 4px;
   font-family: inherit;
+  margin-left: 20px;
 }
 .title-input::placeholder {
   color: #c8c6c4;
