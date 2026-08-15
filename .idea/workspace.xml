@@ -1,0 +1,415 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="f8ee5bea-822c-4815-aa94-aa6a0f61d913" name="Changes" comment="fix ci" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CopilotPersistence">
+    <persistenceIdMap>
+      <entry key="_C:/Users/domenic.pfau/feynman-learning-plattform" value="3HiLJCW5Lg49pmDOLTCuPRlmGAI" />
+      <entry key="_C:/Users/domenic.pfau/feynman-learning-plattform/backend" value="3Ho1VRPa6M8SsH5tEzpA0hI7kSj" />
+    </persistenceIdMap>
+  </component>
+  <component name="CopilotUserSelectedChatMode">
+    <option name="chatModeId" value="Agent" />
+  </component>
+  <component name="CopilotUserSelectedModel">
+    <selectedModels>
+      <entry key="agent-panel" value="Claude Opus 4.8" />
+      <entry key="chat-panel" value="Claude Opus 4.8" />
+    </selectedModels>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1
+}</component>
+  <component name="ProjectId" id="3HiLJCW5Lg49pmDOLTCuPRlmGAI" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Maven.feynman-backend [clean].executor": "Run",
+    "RequestMappingsPanelOrder0": "0",
+    "RequestMappingsPanelOrder1": "1",
+    "RequestMappingsPanelWidth0": "75",
+    "RequestMappingsPanelWidth1": "75",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "Spring Boot.FeynmanBackendApplication.executor": "Run",
+    "Vitest.TextBoxItem.spec.ts (2).executor": "Run",
+    "git-widget-placeholder": "main",
+    "junie.onboarding.icon.badge.shown": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Users/domenic.pfau/feynman-learning-plattform",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2",
+    "settings.editor.selected.configurable": "project.scopes",
+    "ts.external.directory.path": "C:\\Users\\domenic.pfau\\feynman-learning-plattform\\frontend\\node_modules\\typescript\\lib",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RunManager" selected="Spring Boot.FeynmanBackendApplication">
+    <configuration name="TextBoxItem.spec.ts (1)" type="JavaScriptTestRunnerVitest" temporary="true" nameIsGenerated="true">
+      <config value="$PROJECT_DIR$/frontend/vitest.config.ts" />
+      <node-interpreter value="project" />
+      <vitest-options value="--run" />
+      <envs />
+      <scope-kind value="TEST_FILE" />
+      <test-file value="$PROJECT_DIR$/frontend/src/components/__tests__/TextBoxItem.spec.ts" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TextBoxItem.spec.ts (2)" type="JavaScriptTestRunnerVitest" temporary="true" nameIsGenerated="true">
+      <node-interpreter value="project" />
+      <vitest-package value="$PROJECT_DIR$/frontend/node_modules/vitest" />
+      <vitest-options value="--run" />
+      <envs />
+      <scope-kind value="TEST_FILE" />
+      <test-file value="$PROJECT_DIR$/frontend/src/components/__tests__/TextBoxItem.spec.ts" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TextBoxItem.spec.ts" type="JavaScriptTestRunnerVitest" temporary="true" nameIsGenerated="true">
+      <config value="$PROJECT_DIR$/frontend/vitest.config.ts" />
+      <node-interpreter value="project" />
+      <vitest-options value="--run" />
+      <envs />
+      <scope-kind value="TEST_FILE" />
+      <test-file value="$PROJECT_DIR$/frontend/src/components/__tests__/TextBoxItem.spec.ts" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="feynman-learning-plattform" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <module name="feynman-learning-plattform" />
+      <option name="filePath" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="PythonConfigurationType" factoryName="Python">
+      <module name="feynman-learning-plattform" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="Python.FlaskServer">
+      <module name="feynman-learning-plattform" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="launchJavascriptDebuger" value="false" />
+      <method v="2" />
+    </configuration>
+    <configuration name="FeynmanBackendApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <option name="ALTERNATIVE_JRE_PATH" value="jdk-21" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+      <envs>
+        <env name="OPENAI_API_KEY" value="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" />
+        <env name="OPENAI_MOCK" value="false" />
+      </envs>
+      <module name="feynman-backend" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.feynman.backend.FeynmanBackendApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="Tox" factoryName="Tox">
+      <module name="feynman-learning-plattform" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="Doctests">
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Spring Boot.FeynmanBackendApplication" />
+      <item itemvalue="Vitest.TextBoxItem.spec.ts" />
+      <item itemvalue="Vitest.TextBoxItem.spec.ts (1)" />
+      <item itemvalue="Vitest.TextBoxItem.spec.ts (2)" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Vitest.TextBoxItem.spec.ts (2)" />
+        <item itemvalue="Vitest.TextBoxItem.spec.ts (1)" />
+        <item itemvalue="Vitest.TextBoxItem.spec.ts" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-125ca727e0f0-intellij.indexing.shared.core-IU-243.23654.117" />
+        <option value="bundled-js-predefined-d6986cc7102b-822845ee3bb5-JavaScript-IU-243.23654.117" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="f8ee5bea-822c-4815-aa94-aa6a0f61d913" name="Changes" comment="" />
+      <created>1786345868632</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1786345868632</updated>
+      <workItem from="1786345869728" duration="678000" />
+      <workItem from="1786346567841" duration="6512000" />
+      <workItem from="1786432742315" duration="6550000" />
+      <workItem from="1786515727704" duration="3850000" />
+      <workItem from="1786519622611" duration="2588000" />
+      <workItem from="1786522850232" duration="678000" />
+      <workItem from="1786523546989" duration="10886000" />
+    </task>
+    <task id="LOCAL-00001" summary="on page click to create text box">
+      <option name="closed" value="true" />
+      <created>1786349089145</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1786349089145</updated>
+    </task>
+    <task id="LOCAL-00002" summary="when textbox is empty it gets deleted">
+      <option name="closed" value="true" />
+      <created>1786349409835</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1786349409835</updated>
+    </task>
+    <task id="LOCAL-00003" summary="show full textbox all the time (dont collapse when somewhere else clicked)">
+      <option name="closed" value="true" />
+      <created>1786349671270</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1786349671270</updated>
+    </task>
+    <task id="LOCAL-00004" summary="refactor textbox functionality to be own component">
+      <option name="closed" value="true" />
+      <created>1786350077238</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1786350077238</updated>
+    </task>
+    <task id="LOCAL-00005" summary="fix after refactor to new component">
+      <option name="closed" value="true" />
+      <created>1786352200614</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1786352200614</updated>
+    </task>
+    <task id="LOCAL-00006" summary="add test setup (vité test and vue test stuff)">
+      <option name="closed" value="true" />
+      <created>1786352457287</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1786352457287</updated>
+    </task>
+    <task id="LOCAL-00007" summary="add unit tests for textbox feature">
+      <option name="closed" value="true" />
+      <created>1786352896736</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1786352896736</updated>
+    </task>
+    <task id="LOCAL-00008" summary="add ci test pipeline step">
+      <option name="closed" value="true" />
+      <created>1786352970060</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1786352970060</updated>
+    </task>
+    <task id="LOCAL-00009" summary="FLP14 - edit and delete notbooks">
+      <option name="closed" value="true" />
+      <created>1786434930010</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1786434930010</updated>
+    </task>
+    <task id="LOCAL-00010" summary="add custom dialog">
+      <option name="closed" value="true" />
+      <created>1786435351319</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1786435351319</updated>
+    </task>
+    <task id="LOCAL-00011" summary="add unit tests">
+      <option name="closed" value="true" />
+      <created>1786435660518</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1786435660518</updated>
+    </task>
+    <task id="LOCAL-00012" summary="fix build">
+      <option name="closed" value="true" />
+      <created>1786438290215</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1786438290215</updated>
+    </task>
+    <task id="LOCAL-00013" summary="added backend and score evaluation api">
+      <option name="closed" value="true" />
+      <created>1786528860944</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1786528860944</updated>
+    </task>
+    <task id="LOCAL-00014" summary="added tests and be ci">
+      <option name="closed" value="true" />
+      <created>1786529210079</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1786529210079</updated>
+    </task>
+    <task id="LOCAL-00015" summary="added tests and be ci">
+      <option name="closed" value="true" />
+      <created>1786529550458</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1786529550458</updated>
+    </task>
+    <task id="LOCAL-00016" summary="fix ci">
+      <option name="closed" value="true" />
+      <created>1786778657419</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1786778657419</updated>
+    </task>
+    <option name="localTasksCounter" value="17" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="main" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="FLP2 on page click to create text box" />
+    <MESSAGE value="FLP2 on page click to create text box" />
+    <MESSAGE value="when textbox is empty it gets deleted" />
+    <MESSAGE value="show full textbox all the time (dont collapse when somewhere else clicked)" />
+    <MESSAGE value="refactor textbox functionality to be own component" />
+    <MESSAGE value="fix after refactor to new component" />
+    <MESSAGE value="add test setup (vité test and vue test stuff)" />
+    <MESSAGE value="add unit tests for textbox feature" />
+    <MESSAGE value="add ci test pipeline step" />
+    <MESSAGE value="FLP14 - edit and delete notbooks" />
+    <MESSAGE value="add custom dialog" />
+    <MESSAGE value="add unit tests" />
+    <MESSAGE value="FLP3 added switch toggle and progress badges (#17)&#10;&#10;* FLP3 added switch toggle and progress badges&#10;&#10;* fix build&#10;&#10;---------&#10;&#10;Co-authored-by: domenic.pfau &lt;domenic.pfau@kuehne-nagel.com&gt;" />
+    <MESSAGE value="fix build" />
+    <MESSAGE value="added backend and score evaluation api" />
+    <MESSAGE value="added tests and be ci" />
+    <MESSAGE value="fix ci" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix ci" />
+  </component>
+  <component name="github-copilot-workspace">
+    <instructionFileLocations>
+      <option value=".github/instructions" />
+    </instructionFileLocations>
+    <promptFileLocations>
+      <option value=".github/prompts" />
+    </promptFileLocations>
+  </component>
+</project>

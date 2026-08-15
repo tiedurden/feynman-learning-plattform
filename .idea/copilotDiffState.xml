@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CopilotDiffPersistence">
+    <option name="pendingDiffs">
+      <map>
+        <entry key="$PROJECT_DIR$/backend/.gitignore">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/backend/.gitignore" />
+              <option name="updatedContent" value="target/&#10;!.mvn/wrapper/maven-wrapper.jar&#10;*.class&#10;&#10;### IntelliJ ###&#10;.idea/&#10;*.iml&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/backend/README.md">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/backend/README.md" />
+              <option name="updatedContent" value="# Feynman Backend&#10;&#10;Spring Boot service that evaluates a user's notebooks/pages and scores how well&#10;each topic appears to be **understood**, following the Feynman technique: if you&#10;can explain something simply and completely, you understand it well.&#10;&#10;It replaces the frontend's hard-coded `progress.ts` placeholder values with real,&#10;LLM-evaluated (or heuristic) scores.&#10;&#10;## API&#10;&#10;### `POST /api/evaluate`&#10;&#10;Request body:&#10;&#10;```json&#10;{&#10;  &quot;notebooks&quot;: [{ &quot;id&quot;: &quot;nb-study&quot;, &quot;title&quot;: &quot;Study&quot;, &quot;color&quot;: &quot;#c94f0c&quot; }],&#10;  &quot;pages&quot;: [&#10;    {&#10;      &quot;id&quot;: &quot;pg-feynman&quot;,&#10;      &quot;notebookId&quot;: &quot;nb-study&quot;,&#10;      &quot;parentId&quot;: null,&#10;      &quot;title&quot;: &quot;Feynman Technique&quot;,&#10;      &quot;content&quot;: &quot;Pick a concept, teach it simply, identify gaps...&quot;,&#10;      &quot;boxes&quot;: [],&#10;      &quot;order&quot;: 0&#10;    }&#10;  ],&#10;  &quot;notebookId&quot;: &quot;nb-study&quot;&#10;}&#10;```&#10;&#10;- `notebookId` is **optional**. When present, only that notebook and its pages&#10;  are evaluated.&#10;&#10;Response body:&#10;&#10;```json&#10;{&#10;  &quot;pageScores&quot;: {&#10;    &quot;pg-feynman&quot;: { &quot;score&quot;: 88, &quot;understandingNotes&quot;: &quot;Clear, structured steps.&quot; }&#10;  },&#10;  &quot;notebookScores&quot;: {&#10;    &quot;nb-study&quot;: { &quot;score&quot;: 88, &quot;understandingNotes&quot;: &quot;Average understanding across 1 page(s).&quot; }&#10;  }&#10;}&#10;```&#10;&#10;Notebook scores are the average of their pages' scores.&#10;&#10;## Running&#10;&#10;```bash&#10;cd backend&#10;mvn spring-boot:run&#10;```&#10;&#10;The server listens on `http://localhost:8080` and allows CORS from the Vite dev&#10;server (`http://localhost:5173`).&#10;&#10;### With OpenAI (real grading)&#10;&#10;Set an API key before starting:&#10;&#10;```bash&#10;# Windows (cmd.exe)&#10;set OPENAI_API_KEY=sk-...&#10;mvn spring-boot:run&#10;```&#10;&#10;Optional overrides: `OPENAI_MODEL` (default `gpt-4o-mini`), `OPENAI_BASE_URL`.&#10;&#10;### Without a key (offline mock)&#10;&#10;If `OPENAI_API_KEY` is empty (or `OPENAI_MOCK=true`), the service returns&#10;**deterministic** heuristic scores based on note length, so the app runs fully&#10;offline. No key required.&#10;&#10;## Tests&#10;&#10;```bash&#10;mvn test&#10;```&#10;&#10;The service's mock scoring path is covered without needing an API key.&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/backend/pom.xml">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/backend/pom.xml" />
+              <option name="updatedContent" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&#10;&lt;project xmlns=&quot;http://maven.apache.org/POM/4.0.0&quot;&#10;         xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;&#10;         xsi:schemaLocation=&quot;http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd&quot;&gt;&#10;    &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;&#10;&#10;    &lt;parent&gt;&#10;        &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;&#10;        &lt;artifactId&gt;spring-boot-starter-parent&lt;/artifactId&gt;&#10;        &lt;version&gt;3.3.4&lt;/version&gt;&#10;        &lt;relativePath/&gt;&#10;    &lt;/parent&gt;&#10;&#10;    &lt;groupId&gt;com.feynman&lt;/groupId&gt;&#10;    &lt;artifactId&gt;feynman-backend&lt;/artifactId&gt;&#10;    &lt;version&gt;0.1.0&lt;/version&gt;&#10;    &lt;name&gt;feynman-backend&lt;/name&gt;&#10;    &lt;description&gt;Evaluates notebooks and scores how well a user understands a topic (Feynman technique).&lt;/description&gt;&#10;&#10;    &lt;properties&gt;&#10;        &lt;java.version&gt;17&lt;/java.version&gt;&#10;    &lt;/properties&gt;&#10;&#10;    &lt;dependencies&gt;&#10;        &lt;dependency&gt;&#10;            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;&#10;            &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt;&#10;        &lt;/dependency&gt;&#10;        &lt;dependency&gt;&#10;            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;&#10;            &lt;artifactId&gt;spring-boot-starter-validation&lt;/artifactId&gt;&#10;        &lt;/dependency&gt;&#10;&#10;        &lt;dependency&gt;&#10;            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;&#10;            &lt;artifactId&gt;spring-boot-starter-test&lt;/artifactId&gt;&#10;            &lt;scope&gt;test&lt;/scope&gt;&#10;        &lt;/dependency&gt;&#10;    &lt;/dependencies&gt;&#10;&#10;    &lt;build&gt;&#10;        &lt;plugins&gt;&#10;            &lt;plugin&gt;&#10;                &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;&#10;                &lt;artifactId&gt;spring-boot-maven-plugin&lt;/artifactId&gt;&#10;            &lt;/plugin&gt;&#10;        &lt;/plugins&gt;&#10;    &lt;/build&gt;&#10;&lt;/project&gt;&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/FeynmanBackendApplication.java">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/FeynmanBackendApplication.java" />
+              <option name="updatedContent" value="package com.feynman.backend;&#10;&#10;import org.springframework.boot.SpringApplication;&#10;import org.springframework.boot.autoconfigure.SpringBootApplication;&#10;import org.springframework.boot.context.properties.ConfigurationPropertiesScan;&#10;&#10;/**&#10; * Entry point for the Feynman learning-platform backend.&#10; *&#10; * &lt;p&gt;The backend evaluates a user's notebooks/pages and scores how well the&#10; * topic appears to be understood, following the Feynman technique (if you can&#10; * explain it simply, you understand it). Scores replace the front-end's&#10; * hard-coded {@code progress.ts} placeholder values.&lt;/p&gt;&#10; */&#10;@SpringBootApplication&#10;@ConfigurationPropertiesScan&#10;public class FeynmanBackendApplication {&#10;&#10;    public static void main(String[] args) {&#10;        SpringApplication.run(FeynmanBackendApplication.class, args);&#10;    }&#10;}&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/controller/GlobalExceptionHandler.java">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/controller/GlobalExceptionHandler.java" />
+              <option name="updatedContent" value="package com.feynman.backend.controller;&#10;&#10;import com.feynman.backend.service.OpenAiEvaluationService.EvaluationException;&#10;import org.slf4j.Logger;&#10;import org.slf4j.LoggerFactory;&#10;import org.springframework.http.HttpStatus;&#10;import org.springframework.http.ProblemDetail;&#10;import org.springframework.web.bind.MethodArgumentNotValidException;&#10;import org.springframework.web.bind.annotation.ExceptionHandler;&#10;import org.springframework.web.bind.annotation.RestControllerAdvice;&#10;&#10;/**&#10; * Translates uncaught exceptions into RFC 7807 {@link ProblemDetail} responses.&#10; */&#10;@RestControllerAdvice&#10;public class GlobalExceptionHandler {&#10;&#10;    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);&#10;&#10;    @ExceptionHandler(MethodArgumentNotValidException.class)&#10;    public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {&#10;        ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);&#10;        pd.setTitle(&quot;Invalid request&quot;);&#10;        pd.setDetail(ex.getBindingResult().getAllErrors().stream()&#10;                .findFirst()&#10;                .map(err -&gt; err.getDefaultMessage())&#10;                .orElse(&quot;Validation failed&quot;));&#10;        return pd;&#10;    }&#10;&#10;    @ExceptionHandler(EvaluationException.class)&#10;    public ProblemDetail handleEvaluation(EvaluationException ex) {&#10;        log.error(&quot;Evaluation failed&quot;, ex);&#10;        ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.BAD_GATEWAY);&#10;        pd.setTitle(&quot;Evaluation failed&quot;);&#10;        pd.setDetail(ex.getMessage());&#10;        return pd;&#10;    }&#10;&#10;    @ExceptionHandler(Exception.class)&#10;    public ProblemDetail handleGeneric(Exception ex) {&#10;        log.error(&quot;Unexpected error&quot;, ex);&#10;        ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);&#10;        pd.setTitle(&quot;Internal error&quot;);&#10;        pd.setDetail(&quot;An unexpected error occurred.&quot;);&#10;        return pd;&#10;    }&#10;}&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/dto/EvaluateRequest.java">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/dto/EvaluateRequest.java" />
+              <option name="updatedContent" value="package com.feynman.backend.dto;&#10;&#10;import jakarta.validation.constraints.NotNull;&#10;&#10;import java.util.List;&#10;&#10;/**&#10; * Request payload for {@code POST /api/evaluate}.&#10; *&#10; * &lt;p&gt;The frontend sends its full set of notebooks and pages; the backend&#10; * returns an understanding score (0–100) for every page and an aggregate&#10; * score for every notebook. When {@code notebookId} is provided, only that&#10; * notebook (and its pages) is evaluated.&lt;/p&gt;&#10; *&#10; * @param notebookId Optional filter — evaluate only this notebook when set.&#10; */&#10;public record EvaluateRequest(&#10;        @NotNull List&lt;NotebookDto&gt; notebooks,&#10;        @NotNull List&lt;PageDto&gt; pages,&#10;        String notebookId&#10;) {&#10;}&#10;&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/dto/EvaluationResponse.java">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/dto/EvaluationResponse.java" />
+              <option name="updatedContent" value="package com.feynman.backend.dto;&#10;&#10;import java.util.Map;&#10;&#10;/**&#10; * Response payload for {@code POST /api/evaluate}.&#10; *&#10; * &lt;p&gt;Scores are split so the frontend can merge page- and notebook-level&#10; * results independently, matching the shape consumed by {@code setLiveScores}.&#10; * Each map is keyed by the entity id (matching the frontend seed ids).&lt;/p&gt;&#10; */&#10;public record EvaluationResponse(&#10;        Map&lt;String, ScoreDto&gt; pageScores,&#10;        Map&lt;String, ScoreDto&gt; notebookScores&#10;) {&#10;}&#10;&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/dto/NotebookDto.java">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/dto/NotebookDto.java" />
+              <option name="updatedContent" value="package com.feynman.backend.dto;&#10;&#10;/**&#10; * Mirrors the frontend {@code Notebook} type.&#10; */&#10;public record NotebookDto(&#10;        String id,&#10;        String title,&#10;        String color&#10;) {&#10;}&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/dto/PageDto.java">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/dto/PageDto.java" />
+              <option name="updatedContent" value="package com.feynman.backend.dto;&#10;&#10;import java.util.List;&#10;&#10;/**&#10; * Mirrors the frontend {@code Page} type. Represents a single page whose&#10; * understanding we want to score.&#10; */&#10;public record PageDto(&#10;        String id,&#10;        String notebookId,&#10;        String parentId,&#10;        String title,&#10;        String content,&#10;        List&lt;TextBoxDto&gt; boxes,&#10;        Integer order&#10;) {&#10;    /** Combined free text of the page (content + all text boxes). */&#10;    public String combinedText() {&#10;        StringBuilder sb = new StringBuilder();&#10;        if (content != null) {&#10;            sb.append(content);&#10;        }&#10;        if (boxes != null) {&#10;            for (TextBoxDto box : boxes) {&#10;                if (box != null &amp;&amp; box.text() != null &amp;&amp; !box.text().isBlank()) {&#10;                    sb.append(&quot;\n&quot;).append(box.text());&#10;                }&#10;            }&#10;        }&#10;        return sb.toString().trim();&#10;    }&#10;}&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/dto/ScoreDto.java">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/dto/ScoreDto.java" />
+              <option name="updatedContent" value="package com.feynman.backend.dto;&#10;&#10;/**&#10; * A single understanding score for a notebook or page.&#10; *&#10; * @param score              Understanding percentage, 0–100.&#10; * @param understandingNotes Short human-readable explanation of the score.&#10; */&#10;public record ScoreDto(&#10;        int score,&#10;        String understandingNotes&#10;) {&#10;}&#10;&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/dto/TextBoxDto.java">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/dto/TextBoxDto.java" />
+              <option name="updatedContent" value="package com.feynman.backend.dto;&#10;&#10;/**&#10; * Mirrors the frontend {@code TextBox} type: a free-floating text box on the&#10; * page canvas. Only {@code text} matters for evaluation.&#10; */&#10;public record TextBoxDto(&#10;        String id,&#10;        Double x,&#10;        Double y,&#10;        String text,&#10;        Double width&#10;) {&#10;}&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/frontend/src/api/evaluation.ts">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/frontend/src/api/evaluation.ts" />
+              <option name="updatedContent" value="import type { Notebook, Page } from '@/types'&#10;import { evaluateNotes } from '@/services/evaluationApi'&#10;import type { EvaluationResult } from '@/services/evaluationApi'&#10;&#10;/**&#10; * @deprecated Use `@/services/evaluationApi` directly.&#10; *&#10; * Kept as a thin re-export so any existing imports of `@/api/evaluation`&#10; * continue to resolve to the single canonical client.&#10; */&#10;export type { Score, EvaluationResult } from '@/services/evaluationApi'&#10;export { evaluateNotes } from '@/services/evaluationApi'&#10;&#10;/** @deprecated Prefer `evaluateNotes(notebooks, pages, notebookId?)`. */&#10;export async function evaluateNotebooks(payload: {&#10;  notebooks: Notebook[]&#10;  pages: Page[]&#10;  notebookId?: string&#10;}): Promise&lt;EvaluationResult&gt; {&#10;  return evaluateNotes(payload.notebooks, payload.pages, payload.notebookId)&#10;}&#10;&#10;&#10;&#10;&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/frontend/src/services/evaluationApi.ts">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/frontend/src/services/evaluationApi.ts" />
+              <option name="updatedContent" value="import type { Notebook, Page } from '@/types'&#10;&#10;/**&#10; * Client for the Feynman backend evaluation API.&#10; *&#10; * The base URL is configurable via `VITE_API_BASE_URL`; by default it is empty&#10; * so requests hit the Vite dev proxy (`/api → http://localhost:8080`).&#10; */&#10;const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''&#10;&#10;/** A single understanding score returned by the backend. */&#10;export interface Score {&#10;  score: number&#10;  understandingNotes: string&#10;}&#10;&#10;/** Response shape of {@code POST /api/evaluate}. */&#10;export interface EvaluationResult {&#10;  /** Page id → score. */&#10;  pageScores: Record&lt;string, Score&gt;&#10;  /** Notebook id → aggregate score. */&#10;  notebookScores: Record&lt;string, Score&gt;&#10;}&#10;&#10;/**&#10; * Ask the backend to grade how well the user understands each topic.&#10; *&#10; * @param notebooks  All notebooks (or the subset to evaluate).&#10; * @param pages      All pages (the backend filters by `notebookId` if given).&#10; * @param notebookId Optional — evaluate only this notebook and its pages.&#10; */&#10;export async function evaluateNotes(&#10;  notebooks: Notebook[],&#10;  pages: Page[],&#10;  notebookId?: string&#10;): Promise&lt;EvaluationResult&gt; {&#10;  const res = await fetch(`${API_BASE_URL}/api/evaluate`, {&#10;    method: 'POST',&#10;    headers: { 'Content-Type': 'application/json' },&#10;    body: JSON.stringify({ notebooks, pages, notebookId })&#10;  })&#10;&#10;  if (!res.ok) {&#10;    throw new Error(`Evaluation request failed: ${res.status} ${res.statusText}`)&#10;  }&#10;&#10;  return (await res.json()) as EvaluationResult&#10;}&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/frontend/src/utils/__tests__/progress.spec.ts">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/frontend/src/utils/__tests__/progress.spec.ts" />
+              <option name="originalContent" value="import { describe, it, expect } from 'vitest'&#10;import {&#10;  DEFAULT_THRESHOLDS,&#10;  progressLevel,&#10;  getProgress&#10;} from '@/utils/progress'&#10;&#10;describe('progressLevel', () =&gt; {&#10;  it('returns &quot;danger&quot; below the danger threshold (&lt; 33)', () =&gt; {&#10;    expect(progressLevel(0)).toBe('danger')&#10;    expect(progressLevel(32)).toBe('danger')&#10;  })&#10;&#10;  it('returns &quot;warn&quot; between danger and warn thresholds (33–74)', () =&gt; {&#10;    expect(progressLevel(33)).toBe('warn')&#10;    expect(progressLevel(74)).toBe('warn')&#10;  })&#10;&#10;  it('returns &quot;good&quot; at/above the warn threshold (&gt;= 75)', () =&gt; {&#10;    expect(progressLevel(75)).toBe('good')&#10;    expect(progressLevel(100)).toBe('good')&#10;  })&#10;&#10;  it('honours custom thresholds', () =&gt; {&#10;    expect(progressLevel(50, { danger: 60, warn: 90 })).toBe('danger')&#10;    expect(progressLevel(80, { danger: 60, warn: 90 })).toBe('warn')&#10;    expect(progressLevel(95, { danger: 60, warn: 90 })).toBe('good')&#10;  })&#10;&#10;  it('exposes sensible defaults', () =&gt; {&#10;    expect(DEFAULT_THRESHOLDS).toEqual({ danger: 33, warn: 75 })&#10;  })&#10;})&#10;&#10;describe('getProgress', () =&gt; {&#10;  it('is deterministic for the same id', () =&gt; {&#10;    expect(getProgress('nb-1')).toBe(getProgress('nb-1'))&#10;  })&#10;&#10;  it('always returns a value within 0–100', () =&gt; {&#10;    for (const id of ['a', 'nb-1', 'pg-xyz', 'longer-id-string']) {&#10;      const v = getProgress(id)&#10;      expect(v).toBeGreaterThanOrEqual(0)&#10;      expect(v).toBeLessThanOrEqual(100)&#10;    }&#10;  })&#10;})&#10;&#10;" />
+              <option name="updatedContent" value="import { describe, it, expect, beforeEach } from 'vitest'&#10;import {&#10;  DEFAULT_THRESHOLDS,&#10;  progressLevel,&#10;  getProgress,&#10;  setProgress,&#10;  setLiveScores,&#10;  clearProgress,&#10;  DEFAULT_PROGRESS&#10;} from '@/utils/progress'&#10;&#10;describe('progressLevel', () =&gt; {&#10;  it('returns &quot;danger&quot; below the danger threshold (&lt; 33)', () =&gt; {&#10;    expect(progressLevel(0)).toBe('danger')&#10;    expect(progressLevel(32)).toBe('danger')&#10;  })&#10;&#10;  it('returns &quot;warn&quot; between danger and warn thresholds (33–74)', () =&gt; {&#10;    expect(progressLevel(33)).toBe('warn')&#10;    expect(progressLevel(74)).toBe('warn')&#10;  })&#10;&#10;  it('returns &quot;good&quot; at/above the warn threshold (&gt;= 75)', () =&gt; {&#10;    expect(progressLevel(75)).toBe('good')&#10;    expect(progressLevel(100)).toBe('good')&#10;  })&#10;&#10;  it('honours custom thresholds', () =&gt; {&#10;    expect(progressLevel(50, { danger: 60, warn: 90 })).toBe('danger')&#10;    expect(progressLevel(80, { danger: 60, warn: 90 })).toBe('warn')&#10;    expect(progressLevel(95, { danger: 60, warn: 90 })).toBe('good')&#10;  })&#10;&#10;  it('exposes sensible defaults', () =&gt; {&#10;    expect(DEFAULT_THRESHOLDS).toEqual({ danger: 33, warn: 75 })&#10;  })&#10;})&#10;&#10;describe('getProgress', () =&gt; {&#10;  beforeEach(() =&gt; {&#10;    clearProgress()&#10;  })&#10;&#10;  it('returns the default for unknown ids', () =&gt; {&#10;    expect(getProgress('nb-unknown')).toBe(DEFAULT_PROGRESS)&#10;  })&#10;&#10;  it('is deterministic for the same id', () =&gt; {&#10;    expect(getProgress('nb-1')).toBe(getProgress('nb-1'))&#10;  })&#10;&#10;  it('always returns a value within 0–100', () =&gt; {&#10;    for (const id of ['a', 'nb-1', 'pg-xyz', 'longer-id-string']) {&#10;      const v = getProgress(id)&#10;      expect(v).toBeGreaterThanOrEqual(0)&#10;      expect(v).toBeLessThanOrEqual(100)&#10;    }&#10;  })&#10;&#10;  it('reflects a value stored via setProgress (clamped + rounded)', () =&gt; {&#10;    setProgress('nb-1', 73.6)&#10;    expect(getProgress('nb-1')).toBe(74)&#10;    setProgress('nb-1', 250)&#10;    expect(getProgress('nb-1')).toBe(100)&#10;    setProgress('nb-1', -10)&#10;    expect(getProgress('nb-1')).toBe(0)&#10;  })&#10;&#10;  it('merges backend results via setLiveScores', () =&gt; {&#10;    setLiveScores({&#10;      'nb-work': { score: 62, understandingNotes: 'ok' },&#10;      'pg-feynman': { score: 88, understandingNotes: 'clear explanation' }&#10;    })&#10;    expect(getProgress('nb-work')).toBe(62)&#10;    expect(getProgress('pg-feynman')).toBe(88)&#10;  })&#10;&#10;  it('clearProgress resets the cache', () =&gt; {&#10;    setProgress('nb-1', 50)&#10;    clearProgress()&#10;    expect(getProgress('nb-1')).toBe(DEFAULT_PROGRESS)&#10;  })&#10;})&#10;&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

@@ -1,0 +1,37 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: feynman-backend
+
+openai:
+  # The API key is read from the OPENAI_API_KEY environment variable.
+  # Locally: set it in your shell / IntelliJ run config.
+  # CI/CD: provide it via a GitHub Actions secret.
+  # When mock is true, the backend uses deterministic offline scoring.
+  api-key: ${OPENAI_API_KEY:}
+  # Model can be overridden at runtime via the OPENAI_MODEL env var,
+  # a -Dopenai.model=... JVM arg, or a profile-specific application-*.yml.
+  model: ${OPENAI_MODEL:gpt-4o-mini}
+  # Base URL of the OpenAI-compatible chat completions API.
+  base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+  # Explicitly choose deterministic mock scoring instead of OpenAI.
+  mock: ${OPENAI_MOCK:false}
+  # TLS trust store for the OpenAI HTTP client. Leave empty for JDK default.
+  # On Windows the app auto-uses 'Windows-ROOT' so corporate proxy CAs are
+  # trusted. Override here (e.g. to '' ) to force the JDK cacerts store.
+  trust-store-type: ${OPENAI_TRUSTSTORE_TYPE:}
+
+# Allowed frontend origin patterns for CORS (Vite dev server). Vite may move to
+# the next port when the configured port is already occupied.
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:*,http://127.0.0.1:*,http://[::1]:*}
+
+logging:
+  level:
+    com.feynman.backend: INFO
+
+
+
+
