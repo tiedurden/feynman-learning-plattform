@@ -1,8 +1,12 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import {
   DEFAULT_THRESHOLDS,
   progressLevel,
-  getProgress
+  getProgress,
+  setProgress,
+  setLiveScores,
+  clearProgress,
+  DEFAULT_PROGRESS
 } from '@/utils/progress'
 
 describe('progressLevel', () => {
@@ -33,6 +37,14 @@ describe('progressLevel', () => {
 })
 
 describe('getProgress', () => {
+  beforeEach(() => {
+    clearProgress()
+  })
+
+  it('returns the default for unknown ids', () => {
+    expect(getProgress('nb-unknown')).toBe(DEFAULT_PROGRESS)
+  })
+
   it('is deterministic for the same id', () => {
     expect(getProgress('nb-1')).toBe(getProgress('nb-1'))
   })
@@ -43,6 +55,30 @@ describe('getProgress', () => {
       expect(v).toBeGreaterThanOrEqual(0)
       expect(v).toBeLessThanOrEqual(100)
     }
+  })
+
+  it('reflects a value stored via setProgress (clamped + rounded)', () => {
+    setProgress('nb-1', 73.6)
+    expect(getProgress('nb-1')).toBe(74)
+    setProgress('nb-1', 250)
+    expect(getProgress('nb-1')).toBe(100)
+    setProgress('nb-1', -10)
+    expect(getProgress('nb-1')).toBe(0)
+  })
+
+  it('merges backend results via setLiveScores', () => {
+    setLiveScores({
+      'nb-work': { score: 62, understandingNotes: 'ok' },
+      'pg-feynman': { score: 88, understandingNotes: 'clear explanation' }
+    })
+    expect(getProgress('nb-work')).toBe(62)
+    expect(getProgress('pg-feynman')).toBe(88)
+  })
+
+  it('clearProgress resets the cache', () => {
+    setProgress('nb-1', 50)
+    clearProgress()
+    expect(getProgress('nb-1')).toBe(DEFAULT_PROGRESS)
   })
 })
 

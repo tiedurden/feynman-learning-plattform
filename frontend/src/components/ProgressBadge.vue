@@ -10,18 +10,25 @@ const props = defineProps<{
   /** Percent value 0–100. */
   value: number
   thresholds?: ProgressThresholds
+  /** Optional LLM understanding notes, shown in the tooltip. */
+  notes?: string
 }>()
 
 const level = computed(() =>
   progressLevel(props.value, props.thresholds ?? DEFAULT_THRESHOLDS)
 )
+
+const tooltip = computed(() => {
+  const pct = `${Math.round(props.value)}% understanding`
+  return props.notes ? `${pct} — ${props.notes}` : pct
+})
 </script>
 
 <template>
   <span
     class="progress-badge"
     :class="level"
-    :title="`${Math.round(value)}% complete`"
+    :title="tooltip"
   >
     {{ Math.round(value) }}%
   </span>

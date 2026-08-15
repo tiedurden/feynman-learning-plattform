@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import type { PageNode } from '@/types'
 import ProgressBadge from './ProgressBadge.vue'
-import { getProgress } from '@/utils/progress'
+import { getProgress, getUnderstandingNotes } from '@/utils/progress'
 
 const props = defineProps<{
   node: PageNode
@@ -52,6 +52,7 @@ function toggle(event: MouseEvent) {
         v-if="showProgress"
         class="progress"
         :value="getProgress(node.id)"
+        :notes="getUnderstandingNotes(node.id)"
       />
 
       <span class="actions">
