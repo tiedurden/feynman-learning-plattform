@@ -115,6 +115,16 @@ function deletePage(pageId: string) {
   }
 }
 
+/** Navigate to a referenced page (may live in a different notebook). */
+function navigateToPage(targetPageId: string) {
+  const target = store.pageById(targetPageId)
+  if (!target) return
+  router.push({
+    name: 'page',
+    params: { id: target.notebookId, pageId: target.id }
+  })
+}
+
 /** Evaluate only the currently active notebook. */
 function evaluateActiveNotebook() {
   if (!activeNotebookId.value) return
@@ -196,6 +206,7 @@ function evaluateAll() {
       <NoteEditor
         :page="activePage"
         @update="(patch) => activePage && store.updatePage(activePage.id, patch)"
+        @navigate="navigateToPage"
       />
     </div>
   </div>

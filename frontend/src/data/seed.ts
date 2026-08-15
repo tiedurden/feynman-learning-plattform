@@ -185,6 +185,34 @@ export const seedPages: Page[] = [
     order: 0
   },
 
+  {
+    id: 'pg-napoleon',
+    notebookId: 'nb-history',
+    parentId: 'pg-french-revolution',
+    title: 'Napoleon',
+    content:
+      '## Napoleon Bonaparte\n\nMilitary general who rose to power during the later stages of the French Revolution and seized control in the 1799 coup of 18 Brumaire, ending the revolutionary period.',
+    boxes: [
+      {
+        id: 'box-nap-rise',
+        x: 40,
+        y: 20,
+        width: 300,
+        text:
+          'Rise to power: Made his name as a general in the revolutionary wars. In 1799 he overthrew the Directory in the coup of 18 Brumaire and became First Consul — effectively ending the Revolution.'
+      },
+      {
+        id: 'box-nap-empire',
+        x: 40,
+        y: 180,
+        width: 300,
+        text:
+          'Emperor: Crowned himself Emperor of the French in 1804. Reformed law with the Napoleonic Code, but also plunged Europe into years of war. (Need to review the details of his campaigns.)'
+      }
+    ],
+    order: 1
+  },
+
   // --- Biology notebook ------------------------------------------------------
   // Notes that reflect DEEP understanding (~90%+): accurate mechanism, correct
   // terminology, the two coupled stages explained, inputs/outputs balanced,

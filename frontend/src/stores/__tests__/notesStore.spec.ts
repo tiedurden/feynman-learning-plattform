@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useNotesStore } from '@/stores/notesStore'
 
-const STORAGE_KEY = 'onenote-notes:v1'
+const STORAGE_KEY = 'onenote-notes:v2'
 
 describe('notesStore — happy paths', () => {
   beforeEach(() => {
@@ -154,4 +154,189 @@ describe('notesStore — happy paths', () => {
     expect(rootNode!.children.map((c) => c.id)).toContain(child.id)
   })
 })
+
+describe('notesStore — inline references (links)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+
+  /** Set up a notebook + page + one text box, returning their ids. */
+  function setup(text = 'See Napoleon here') {
+    const store = useNotesStore()
+    const nb = store.addNotebook('History')
+    const page = store.addPage(nb.id, null, 'French Revolution')
+    const target = store.addPage(nb.id, null, 'Napoleon')
+    const box = store.addTextBox(page.id, { x: 0, y: 0, text })!
+    return { store, nb, page, target, box }
+  }
+
+  it('defaults references to [] for new text boxes', () => {
+    const { box } = setup()
+    expect(box.references).toEqual([])
+  })
+
+  it('adds a reference over an existing range (no text change)', () => {
+    const { store, page, target, box } = setup('See Napoleon here')
+
+    const ref = store.addBoxReference(page.id, box.id, {
+      start: 4,
+      end: 12,
+      targetPageId: target.id
+    })
+
+    expect(ref).toBeDefined()
+    expect(ref!.id).toMatch(/^ref-/)
+    const saved = store.pageById(page.id)!.boxes[0]
+    expect(saved.text).toBe('See Napoleon here')
+    expect(saved.references).toEqual([
+      expect.objectContaining({ start: 4, end: 12, targetPageId: target.id })
+    ])
+  })
+
+  it('rewrites the marked range when linkText differs and records offsets', () => {
+    const { store, page, target, box } = setup('See Nap here')
+
+    store.addBoxReference(page.id, box.id, {
+      start: 4,
+      end: 7, // "Nap"
+      targetPageId: target.id,
+      linkText: 'Napoleon'
+    })
+
+    const saved = store.pageById(page.id)!.boxes[0]
+    expect(saved.text).toBe('See Napoleon here')
+    expect(saved.references[0]).toEqual(
+      expect.objectContaining({ start: 4, end: 12, targetPageId: target.id })
+    )
+  })
+
+  it('removes a reference but keeps the text', () => {
+    const { store, page, target, box } = setup('See Napoleon here')
+    const ref = store.addBoxReference(page.id, box.id, {
+      start: 4,
+      end: 12,
+      targetPageId: target.id
+    })!
+
+    store.removeBoxReference(page.id, box.id, ref.id)
+
+    const saved = store.pageById(page.id)!.boxes[0]
+    expect(saved.references).toHaveLength(0)
+    expect(saved.text).toBe('See Napoleon here')
+  })
+
+  it('updates a reference target', () => {
+    const { store, nb, page, target, box } = setup('See Napoleon here')
+    const other = store.addPage(nb.id, null, 'Other')
+    const ref = store.addBoxReference(page.id, box.id, {
+      start: 4,
+      end: 12,
+      targetPageId: target.id
+    })!
+
+    store.updateBoxReference(page.id, box.id, ref.id, { targetPageId: other.id })
+
+    expect(store.pageById(page.id)!.boxes[0].references[0].targetPageId).toBe(other.id)
+  })
+
+  it('updates a reference text, shifting later references', () => {
+    const { store, page, target } = setup('AA BB CC')
+    // Re-create the box with two references: "AA" (0-2) and "CC" (6-8).
+    const box = store.pageById(page.id)!.boxes[0]
+    const r1 = store.addBoxReference(page.id, box.id, {
+      start: 0,
+      end: 2,
+      targetPageId: target.id
+    })!
+    store.addBoxReference(page.id, box.id, {
+      start: 6,
+      end: 8,
+      targetPageId: target.id
+    })
+
+    store.updateBoxReference(page.id, box.id, r1.id, { linkText: 'AAAA' })
+
+    const saved = store.pageById(page.id)!.boxes[0]
+    expect(saved.text).toBe('AAAA BB CC')
+    const first = saved.references.find((r) => r.id === r1.id)!
+    const second = saved.references.find((r) => r.id !== r1.id)!
+    expect(first).toEqual(expect.objectContaining({ start: 0, end: 4 }))
+    expect(second).toEqual(expect.objectContaining({ start: 8, end: 10 }))
+  })
+
+  it('prunes references whose linked substring changes on text edit', () => {
+    const { store, page, target, box } = setup('Hello Napoleon')
+    store.addBoxReference(page.id, box.id, {
+      start: 6,
+      end: 14,
+      targetPageId: target.id
+    })
+
+    // Editing before the link so the offsets no longer cover "Napoleon".
+    store.updateTextBox(page.id, box.id, { text: 'Hi Napoleon' })
+
+    expect(store.pageById(page.id)!.boxes[0].references).toHaveLength(0)
+  })
+
+  it('keeps references when an unrelated part of the text is edited in place', () => {
+    const { store, page, target, box } = setup('Hello Napoleon')
+    store.addBoxReference(page.id, box.id, {
+      start: 6,
+      end: 14,
+      targetPageId: target.id
+    })
+
+    // Same length, "Napoleon" stays at 6-14.
+    store.updateTextBox(page.id, box.id, { text: 'Jello Napoleon' })
+
+    expect(store.pageById(page.id)!.boxes[0].references).toHaveLength(1)
+  })
+
+  it('pagePath returns the notebook → ancestors → page breadcrumb', () => {
+    const store = useNotesStore()
+    const nb = store.addNotebook('History')
+    const root = store.addPage(nb.id, null, 'French Revolution')
+    const child = store.addPage(nb.id, root.id, 'Napoleon')
+
+    expect(store.pagePath(child.id)).toEqual(['History', 'French Revolution', 'Napoleon'])
+  })
+
+  it('allNotebookTrees pairs each notebook with its page tree', () => {
+    const store = useNotesStore()
+    const nb = store.addNotebook('History')
+    const root = store.addPage(nb.id, null, 'Root')
+    store.addPage(nb.id, root.id, 'Child')
+
+    const trees = store.allNotebookTrees
+    const entry = trees.find((t) => t.notebook.id === nb.id)
+    expect(entry).toBeDefined()
+    expect(entry!.tree.find((n) => n.id === root.id)!.children).toHaveLength(1)
+  })
+
+  it('backfills references: [] for legacy persisted boxes without it', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        notebooks: [{ id: 'nb-1', title: 'Legacy', color: '#000000' }],
+        pages: [
+          {
+            id: 'pg-1',
+            notebookId: 'nb-1',
+            parentId: null,
+            title: 'Legacy page',
+            content: '',
+            boxes: [{ id: 'tb-1', x: 0, y: 0, text: 'No refs field' }],
+            order: 0
+          }
+        ]
+      })
+    )
+    setActivePinia(createPinia())
+    const store = useNotesStore()
+
+    expect(store.pageById('pg-1')!.boxes[0].references).toEqual([])
+  })
+})
+
 

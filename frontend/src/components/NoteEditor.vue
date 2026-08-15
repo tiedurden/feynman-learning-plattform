@@ -3,6 +3,10 @@ import { computed, ref, watch } from 'vue'
 import type { Page, TextBox } from '@/types'
 import { useNotesStore } from '@/stores/notesStore'
 import TextBoxItem from './TextBoxItem.vue'
+import LinkContextMenu from './LinkContextMenu.vue'
+import type { MenuItem } from './LinkContextMenu.vue'
+import ReferenceModal from './ReferenceModal.vue'
+import RefTooltip from './RefTooltip.vue'
 
 const props = defineProps<{
   page?: Page
@@ -10,6 +14,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update', patch: Partial<Pick<Page, 'title'>>): void
+  (e: 'navigate', targetPageId: string): void
 }>()
 
 const store = useNotesStore()
@@ -93,6 +98,147 @@ function onSavedBlur(box: TextBox) {
   }
 }
 
+// --- Reference (link) creation / editing ------------------------------------
+interface PendingLink {
+  boxId: string
+  start: number
+  end: number
+  text: string
+}
+
+const contextMenu = ref<{ x: number; y: number; items: MenuItem[] } | null>(null)
+const modalOpen = ref(false)
+const modalMode = ref<'create' | 'edit'>('create')
+const modalInitialText = ref('')
+const modalInitialTarget = ref<string | undefined>(undefined)
+/** Set while creating a brand-new link. */
+const pendingLink = ref<PendingLink | null>(null)
+/** Set while editing an existing link. */
+const editingRef = ref<{ boxId: string; referenceId: string } | null>(null)
+
+const notebookTrees = computed(() => store.allNotebookTrees)
+
+function closeMenu() {
+  contextMenu.value = null
+}
+
+/** Right-clicked a text selection → offer "Create link". */
+function onRequestLink(
+  box: TextBox,
+  payload: { start: number; end: number; x: number; y: number }
+) {
+  const pending: PendingLink = {
+    boxId: box.id,
+    start: payload.start,
+    end: payload.end,
+    text: box.text.slice(payload.start, payload.end)
+  }
+  contextMenu.value = {
+    x: payload.x,
+    y: payload.y,
+    items: [{ label: '🔗 Create link…', action: () => startCreate(pending) }]
+  }
+}
+
+/** Right-clicked an existing link → offer "Edit" / "Remove". */
+function onRequestLinkMenu(
+  box: TextBox,
+  payload: { referenceId: string; x: number; y: number }
+) {
+  const ref = box.references?.find((r) => r.id === payload.referenceId)
+  if (!ref) return
+  const currentText = box.text.slice(ref.start, ref.end)
+  const targetPageId = ref.targetPageId
+  contextMenu.value = {
+    x: payload.x,
+    y: payload.y,
+    items: [
+      {
+        label: '✏️ Edit link…',
+        action: () => startEdit(box.id, ref.id, currentText, targetPageId)
+      },
+      {
+        label: '🗑 Remove link',
+        danger: true,
+        action: () => removeLink(box.id, ref.id)
+      }
+    ]
+  }
+}
+
+function startCreate(pending: PendingLink) {
+  pendingLink.value = pending
+  editingRef.value = null
+  modalMode.value = 'create'
+  modalInitialText.value = pending.text
+  modalInitialTarget.value = undefined
+  contextMenu.value = null
+  modalOpen.value = true
+}
+
+function startEdit(
+  boxId: string,
+  referenceId: string,
+  currentText: string,
+  targetPageId: string
+) {
+  editingRef.value = { boxId, referenceId }
+  pendingLink.value = null
+  modalMode.value = 'edit'
+  modalInitialText.value = currentText
+  modalInitialTarget.value = targetPageId
+  contextMenu.value = null
+  modalOpen.value = true
+}
+
+function removeLink(boxId: string, referenceId: string) {
+  if (props.page) store.removeBoxReference(props.page.id, boxId, referenceId)
+  contextMenu.value = null
+}
+
+function onModalConfirm(payload: { linkText: string; targetPageId: string }) {
+  if (props.page) {
+    if (modalMode.value === 'create' && pendingLink.value) {
+      store.addBoxReference(props.page.id, pendingLink.value.boxId, {
+        start: pendingLink.value.start,
+        end: pendingLink.value.end,
+        targetPageId: payload.targetPageId,
+        linkText: payload.linkText
+      })
+    } else if (modalMode.value === 'edit' && editingRef.value) {
+      store.updateBoxReference(
+        props.page.id,
+        editingRef.value.boxId,
+        editingRef.value.referenceId,
+        { linkText: payload.linkText, targetPageId: payload.targetPageId }
+      )
+    }
+  }
+  modalOpen.value = false
+  pendingLink.value = null
+  editingRef.value = null
+}
+
+function onModalCancel() {
+  modalOpen.value = false
+  pendingLink.value = null
+  editingRef.value = null
+}
+
+// --- Reference tooltip + navigation -----------------------------------------
+const tooltip = ref<{ path: string[]; rect: DOMRect } | null>(null)
+
+function onRefHover(payload: { targetPageId: string; rect: DOMRect }) {
+  tooltip.value = { path: store.pagePath(payload.targetPageId), rect: payload.rect }
+}
+function onRefLeave() {
+  tooltip.value = null
+}
+function onRefClick(targetPageId: string) {
+  tooltip.value = null
+  emit('navigate', targetPageId)
+}
+
 // --- Drag to reposition a saved box -----------------------------------------
 interface DragState {
   boxId: string
@@ -156,9 +302,15 @@ function onDragUp() {
           :offset-y-in-pixels="box.y"
           :width-in-pixels="box.width"
           :text="box.text"
+          :references="box.references"
           @update:text="onSavedText(box, $event)"
           @blur="onSavedBlur(box)"
           @drag-start="onDragHandleDown(box, $event)"
+          @request-link="onRequestLink(box, $event)"
+          @request-link-menu="onRequestLinkMenu(box, $event)"
+          @ref-click="onRefClick"
+          @ref-hover="onRefHover"
+          @ref-leave="onRefLeave"
         />
 
         <!-- Local drafts (not yet saved) -->
@@ -182,6 +334,29 @@ function onDragUp() {
         <p>Select a page to start taking notes.</p>
       </div>
     </div>
+
+    <!-- Right-click menu: create (on selection) or edit/remove (on a link). -->
+    <LinkContextMenu
+      v-if="contextMenu"
+      :x="contextMenu.x"
+      :y="contextMenu.y"
+      :items="contextMenu.items"
+      @close="closeMenu"
+    />
+
+    <!-- Link create/edit modal: edit text + pick a target page. -->
+    <ReferenceModal
+      :open="modalOpen"
+      :mode="modalMode"
+      :initial-text="modalInitialText"
+      :initial-target-page-id="modalInitialTarget"
+      :notebook-trees="notebookTrees"
+      @confirm="onModalConfirm"
+      @cancel="onModalCancel"
+    />
+
+    <!-- Hover tooltip showing the linked page's notebook path. -->
+    <RefTooltip :path="tooltip?.path ?? []" :rect="tooltip?.rect ?? null" />
   </main>
 </template>
 
