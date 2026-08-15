@@ -1,0 +1,12 @@
+# IntelliJ / JetBrains IDE files (never commit — can contain secrets in run configs)
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+.env.*
+

@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f8ee5bea-822c-4815-aa94-aa6a0f61d913" name="Changes" comment="fix ci" />
+    <list default="true" id="f8ee5bea-822c-4815-aa94-aa6a0f61d913" name="Changes" comment="actually added be" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -26,6 +26,11 @@
     </selectedModels>
   </component>
   <component name="Git.Settings">
+    <option name="PREVIOUS_COMMIT_AUTHORS">
+      <list>
+        <option value="tiedurden &lt;40056575+tiedurden@users.noreply.github.com&gt;" />
+      </list>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="ProjectColorInfo">{
@@ -50,7 +55,7 @@
     "RunOnceActivity.git.unshallow": "true",
     "Spring Boot.FeynmanBackendApplication.executor": "Run",
     "Vitest.TextBoxItem.spec.ts (2).executor": "Run",
-    "git-widget-placeholder": "main",
+    "git-widget-placeholder": "test-add-be",
     "junie.onboarding.icon.badge.shown": "true",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "C:/Users/domenic.pfau/feynman-learning-plattform",
@@ -147,7 +152,7 @@
       <option name="ALTERNATIVE_JRE_PATH" value="jdk-21" />
       <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
       <envs>
-        <env name="OPENAI_API_KEY" value="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" />
+        <env name="OPENAI_API_KEY" value="" />
         <env name="OPENAI_MOCK" value="false" />
       </envs>
       <module name="feynman-backend" />
@@ -225,7 +230,7 @@
       <workItem from="1786515727704" duration="3850000" />
       <workItem from="1786519622611" duration="2588000" />
       <workItem from="1786522850232" duration="678000" />
-      <workItem from="1786523546989" duration="10886000" />
+      <workItem from="1786523546989" duration="11382000" />
     </task>
     <task id="LOCAL-00001" summary="on page click to create text box">
       <option name="closed" value="true" />
@@ -355,7 +360,23 @@
       <option name="project" value="LOCAL" />
       <updated>1786778657419</updated>
     </task>
-    <option name="localTasksCounter" value="17" />
+    <task id="LOCAL-00017" summary="test backend add">
+      <option name="closed" value="true" />
+      <created>1786783175899</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1786783175899</updated>
+    </task>
+    <task id="LOCAL-00018" summary="Add backend (#18)&#10;&#10;* added backend and score evaluation api&#10;&#10;* added tests and be ci&#10;&#10;* fix ci&#10;&#10;---------&#10;&#10;Co-authored-by: domenic.pfau &lt;domenic.pfau@kuehne-nagel.com&gt;">
+      <option name="closed" value="true" />
+      <created>1786783293248</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1786783293248</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -372,7 +393,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="main" />
+                        <option value="test-add-be" />
                       </list>
                     </value>
                   </entry>
@@ -402,7 +423,10 @@
     <MESSAGE value="added backend and score evaluation api" />
     <MESSAGE value="added tests and be ci" />
     <MESSAGE value="fix ci" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix ci" />
+    <MESSAGE value="test backend add" />
+    <MESSAGE value="actually added be" />
+    <MESSAGE value="actually added be" />
+    <option name="LAST_COMMIT_MESSAGE" value="actually added be" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>
