@@ -20,6 +20,23 @@ export interface Notebook {
 }
 
 /**
+ * An inline reference (link) inside a text box. It points a character range of
+ * the box `text` at another page. Offsets are half-open `[start, end)` indices
+ * into the box text at the moment the link was created. They are best-effort:
+ * edits that alter the linked substring drop the reference (see the store's
+ * prune-on-edit logic).
+ */
+export interface TextReference {
+  id: string
+  /** Inclusive start offset into the owning box's `text`. */
+  start: number
+  /** Exclusive end offset into the owning box's `text`. */
+  end: number
+  /** Id of the page this range links to. */
+  targetPageId: string
+}
+
+/**
  * A free-floating text box placed on the page canvas (OneNote style).
  * Position is stored in pixels relative to the top-left of the canvas.
  * Empty boxes are never persisted — they live only as local drafts until
@@ -34,6 +51,8 @@ export interface TextBox {
   text: string
   /** Optional authored width in px (auto if omitted). */
   width?: number
+  /** Inline page references (links) placed within `text`. */
+  references?: TextReference[]
 }
 
 export interface Page {
@@ -56,5 +75,14 @@ export interface Page {
  */
 export interface PageNode extends Page {
   children: PageNode[]
+}
+
+/**
+ * A notebook paired with its resolved page tree — consumed by the reference
+ * picker to render a collapsible notebook → page selector.
+ */
+export interface NotebookTree {
+  notebook: Notebook
+  tree: PageNode[]
 }
 

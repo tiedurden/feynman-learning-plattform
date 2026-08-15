@@ -114,6 +114,8 @@ describe('NoteEditor — text box behaviour', () => {
     store.addTextBox(page.id, { x: 10, y: 10, text: 'Old' })
     const wrapper = mountEditor(page, pinia)
 
+    // Saved boxes start in display mode — click to reveal the textarea.
+    await wrapper.get('.text-display').trigger('click')
     const textarea = wrapper.get('textarea')
     await textarea.setValue('New text')
 
@@ -126,6 +128,8 @@ describe('NoteEditor — text box behaviour', () => {
     store.addTextBox(page.id, { x: 10, y: 10, text: 'Old' })
     const wrapper = mountEditor(page, pinia)
 
+    // Saved boxes start in display mode — click to reveal the textarea.
+    await wrapper.get('.text-display').trigger('click')
     const textarea = wrapper.get('textarea')
     await textarea.setValue('')
     await textarea.trigger('blur')
