@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import type { Notebook, NotebookTree, Page, PageNode, TextBox, TextReference } from '@/types'
 import { seedNotebooks, seedPages } from '@/data/seed'
+import { sanitizeBoxHtml } from '@/utils/sanitizeHtml'
 
 const STORAGE_KEY = 'onenote-notes:v2'
 /** Separate key for lightweight UI preferences (progress toggle, etc.). */

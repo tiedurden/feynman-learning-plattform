@@ -71,9 +71,10 @@ describe('FormatMenu', () => {
   })
 
   describe('active-state indicators', () => {
-    it('reflects the current selection state via aria-pressed and .active', () => {
+    it('reflects the current selection state via aria-pressed and .active', async () => {
       queryCommandState.mockImplementation((cmd: string) => cmd === 'bold')
       const wrapper = mount(FormatMenu, { props })
+      await nextTick()
       const bold = wrapper.get('[aria-label="Bold"]')
       expect(bold.attributes('aria-pressed')).toBe('true')
       expect(bold.classes()).toContain('active')
@@ -134,4 +135,5 @@ describe('FormatMenu', () => {
     })
   })
 })
+
 
