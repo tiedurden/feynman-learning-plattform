@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 
 const props = defineProps<{
   /** Viewport x/y (px) where the menu should appear. */
@@ -24,6 +24,51 @@ const menuEl = ref<HTMLElement | null>(null)
 const pos = ref({ left: props.x, top: props.y })
 /** Hidden until measured so it never flashes in the wrong spot. */
 const ready = ref(false)
+
+/**
+ * Reactive "is this format currently applied to the selection" map, used to
+ * render pressed/active toggle states (and expose them via `aria-pressed`).
+ * Kept in sync with the live selection via `refreshActive()`.
+ */
+const active = reactive({
+  bold: false,
+  italic: false,
+  underline: false,
+  strikeThrough: false,
+  subscript: false,
+  superscript: false,
+  insertUnorderedList: false,
+  insertOrderedList: false,
+  justifyLeft: false,
+  justifyCenter: false,
+  justifyRight: false,
+})
+
+/**
+ * Query the browser for which inline/block commands are active on the current
+ * selection and mirror the result into `active`. `queryCommandState` throws in
+ * some edge cases (detached selection), so each read is defensively guarded.
+ */
+function refreshActive() {
+  const read = (command: string) => {
+    try {
+      return document.queryCommandState(command)
+    } catch {
+      return false
+    }
+  }
+  active.bold = read('bold')
+  active.italic = read('italic')
+  active.underline = read('underline')
+  active.strikeThrough = read('strikeThrough')
+  active.subscript = read('subscript')
+  active.superscript = read('superscript')
+  active.insertUnorderedList = read('insertUnorderedList')
+  active.insertOrderedList = read('insertOrderedList')
+  active.justifyLeft = read('justifyLeft')
+  active.justifyCenter = read('justifyCenter')
+  active.justifyRight = read('justifyRight')
+}
 
 /**
  * The text selection is captured when the menu opens and restored before every
@@ -56,6 +101,8 @@ function notifyChanged() {
   if (active instanceof HTMLElement) {
     active.dispatchEvent(new Event('input', { bubbles: true }))
   }
+  // Refresh toggle indicators so the menu reflects the new selection state.
+  refreshActive()
   emit('applied')
 }
 
@@ -100,6 +147,74 @@ function setFontSize(size: string) {
 }
 
 /**
+ * Block-level commands (headings, alignment, indent) are forced to emit inline
+ * CSS via `styleWithCSS` so they produce sanitizer-friendly markup rather than
+ * deprecated attributes.
+ */
+function runBlock(command: string, value?: string) {
+  restoreSelection()
+  document.execCommand('styleWithCSS', false, 'true')
+  document.execCommand(command, false, value)
+  document.execCommand('styleWithCSS', false, 'false')
+  saveSelection()
+  notifyChanged()
+}
+
+/** Apply (or clear) a block format such as a heading or blockquote. */
+function setBlock(tag: string) {
+  runBlock('formatBlock', tag)
+}
+
+/**
+ * Wrap the current selection in an inline `<code>` element. execCommand has no
+ * native inline-code command, so we manipulate the range directly.
+ */
+function toggleInlineCode() {
+  restoreSelection()
+  const sel = window.getSelection()
+  if (!sel || sel.rangeCount === 0) return
+  const range = sel.getRangeAt(0)
+  if (range.collapsed) return
+  const code = document.createElement('code')
+  try {
+    range.surroundContents(code)
+  } catch {
+    // Range crosses element boundaries — extract then wrap.
+    code.appendChild(range.extractContents())
+    range.insertNode(code)
+  }
+  saveSelection()
+  notifyChanged()
+}
+
+/**
+ * Turn the selection into a link. Prompts for a URL, normalises it to a safe
+ * protocol, and marks the anchor with `rel="noopener"` + `target="_blank"`.
+ */
+function insertLink() {
+  const input = window.prompt('Link URL:', 'https://')
+  if (!input) return
+  const url = /^(https?:|mailto:)/i.test(input) ? input : `https://${input}`
+  restoreSelection()
+  document.execCommand('createLink', false, url)
+  // Harden every anchor in the owning editable (new + any missing attrs).
+  const host = document.activeElement
+  if (host instanceof HTMLElement) {
+    host.querySelectorAll('a[href]').forEach((a) => {
+      a.setAttribute('rel', 'noopener noreferrer')
+      a.setAttribute('target', '_blank')
+    })
+  }
+  saveSelection()
+  notifyChanged()
+}
+
+/** Insert a horizontal divider line at the caret. */
+function insertDivider() {
+  run('insertHorizontalRule')
+}
+
+/**
  * Menu buttons must not steal focus from the editable element, otherwise the
  * text selection collapses before the command runs.  Suppressing the default
  * mousedown behaviour preserves the selection.
@@ -131,18 +246,56 @@ function clampToViewport() {
 }
 
 function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') emit('close')
+  if (e.key === 'Escape') {
+    emit('close')
+    return
+  }
+  // Standard rich-text shortcuts while the menu is open. Ctrl (Win/Linux) or
+  // Cmd (macOS) act as the modifier; each handler mirrors a menu button.
+  const mod = e.ctrlKey || e.metaKey
+  if (!mod) return
+  switch (e.key.toLowerCase()) {
+    case 'b':
+      e.preventDefault()
+      run('bold')
+      break
+    case 'i':
+      e.preventDefault()
+      run('italic')
+      break
+    case 'u':
+      e.preventDefault()
+      run('underline')
+      break
+    case 'e':
+      e.preventDefault()
+      toggleInlineCode()
+      break
+    case 'k':
+      e.preventDefault()
+      insertLink()
+      break
+    case 'x':
+      if (e.shiftKey) {
+        e.preventDefault()
+        run('strikeThrough')
+      }
+      break
+  }
 }
 
 onMounted(() => {
   saveSelection()
+  refreshActive()
   window.addEventListener('keydown', onKeydown)
   window.addEventListener('resize', clampToViewport)
+  document.addEventListener('selectionchange', refreshActive)
   nextTick(clampToViewport)
 })
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown)
   window.removeEventListener('resize', clampToViewport)
+  document.removeEventListener('selectionchange', refreshActive)
 })
 </script>
 
@@ -150,46 +303,192 @@ onBeforeUnmount(() => {
   <div
     ref="menuEl"
     class="format-menu"
+    role="menu"
+    aria-label="Text formatting"
     :style="{ left: pos.left + 'px', top: pos.top + 'px', visibility: ready ? 'visible' : 'hidden' }"
     @mousedown="keepSelection"
     @contextmenu.prevent
   >
-    <div class="row">
-      <button type="button" class="icon" title="Bold" @click="run('bold')">
+    <div class="row" role="group" aria-label="Inline formatting">
+      <button
+        type="button"
+        class="icon"
+        title="Bold (Ctrl+B)"
+        aria-label="Bold"
+        :aria-pressed="active.bold"
+        :class="{ active: active.bold }"
+        @click="run('bold')"
+      >
         <b>B</b>
       </button>
-      <button type="button" class="icon" title="Italic" @click="run('italic')">
+      <button
+        type="button"
+        class="icon"
+        title="Italic (Ctrl+I)"
+        aria-label="Italic"
+        :aria-pressed="active.italic"
+        :class="{ active: active.italic }"
+        @click="run('italic')"
+      >
         <i>I</i>
       </button>
-      <button type="button" class="icon" title="Underline" @click="run('underline')">
+      <button
+        type="button"
+        class="icon"
+        title="Underline (Ctrl+U)"
+        aria-label="Underline"
+        :aria-pressed="active.underline"
+        :class="{ active: active.underline }"
+        @click="run('underline')"
+      >
         <u>U</u>
       </button>
       <button
         type="button"
         class="icon"
-        title="Strikethrough"
+        title="Strikethrough (Ctrl+Shift+X)"
+        aria-label="Strikethrough"
+        :aria-pressed="active.strikeThrough"
+        :class="{ active: active.strikeThrough }"
         @click="run('strikeThrough')"
       >
         <s>S</s>
       </button>
+      <button
+        type="button"
+        class="icon"
+        title="Subscript"
+        aria-label="Subscript"
+        :aria-pressed="active.subscript"
+        :class="{ active: active.subscript }"
+        @click="run('subscript')"
+      >
+        X<sub>2</sub>
+      </button>
+      <button
+        type="button"
+        class="icon"
+        title="Superscript"
+        aria-label="Superscript"
+        :aria-pressed="active.superscript"
+        :class="{ active: active.superscript }"
+        @click="run('superscript')"
+      >
+        X<sup>2</sup>
+      </button>
+      <button
+        type="button"
+        class="icon"
+        title="Inline code (Ctrl+E)"
+        aria-label="Inline code"
+        @click="toggleInlineCode"
+      >
+        <code>&lt;/&gt;</code>
+      </button>
     </div>
 
-    <div class="sep" />
+    <div class="sep" role="separator" />
 
-    <button type="button" class="item" @click="insertCheckbox">
+    <button type="button" class="item" role="menuitem" @click="insertCheckbox">
       ☑ Tick box
     </button>
-    <button type="button" class="item" @click="run('insertUnorderedList')">
+    <button
+      type="button"
+      class="item"
+      role="menuitem"
+      :aria-pressed="active.insertUnorderedList"
+      :class="{ active: active.insertUnorderedList }"
+      @click="run('insertUnorderedList')"
+    >
       • Bulleted list
     </button>
-    <button type="button" class="item" @click="run('insertOrderedList')">
+    <button
+      type="button"
+      class="item"
+      role="menuitem"
+      :aria-pressed="active.insertOrderedList"
+      :class="{ active: active.insertOrderedList }"
+      @click="run('insertOrderedList')"
+    >
       1. Numbered list
     </button>
+    <button type="button" class="item" role="menuitem" @click="setBlock('blockquote')">
+      ❝ Quote block
+    </button>
+    <button type="button" class="item" role="menuitem" title="Insert link (Ctrl+K)" @click="insertLink">
+      🔗 Insert link…
+    </button>
+    <button type="button" class="item" role="menuitem" @click="insertDivider">
+      — Divider line
+    </button>
 
-    <div class="sep" />
+    <div class="sep" role="separator" />
 
-    <div class="label">Font size</div>
-    <div class="row">
+    <div class="label" id="fm-headings">Headings</div>
+    <div class="row" role="group" aria-labelledby="fm-headings">
+      <button type="button" class="chip" title="Heading 1" @click="setBlock('h1')">
+        H1
+      </button>
+      <button type="button" class="chip" title="Heading 2" @click="setBlock('h2')">
+        H2
+      </button>
+      <button type="button" class="chip" title="Heading 3" @click="setBlock('h3')">
+        H3
+      </button>
+      <button type="button" class="chip" title="Normal text" @click="setBlock('p')">
+        ¶
+      </button>
+    </div>
+
+    <div class="sep" role="separator" />
+
+    <div class="label" id="fm-alignment">Alignment</div>
+    <div class="row" role="group" aria-labelledby="fm-alignment">
+      <button
+        type="button"
+        class="chip"
+        title="Align left"
+        aria-label="Align left"
+        :aria-pressed="active.justifyLeft"
+        :class="{ active: active.justifyLeft }"
+        @click="runBlock('justifyLeft')"
+      >
+        ⯇
+      </button>
+      <button
+        type="button"
+        class="chip"
+        title="Align centre"
+        aria-label="Align centre"
+        :aria-pressed="active.justifyCenter"
+        :class="{ active: active.justifyCenter }"
+        @click="runBlock('justifyCenter')"
+      >
+        ≡
+      </button>
+      <button
+        type="button"
+        class="chip"
+        title="Align right"
+        aria-label="Align right"
+        :aria-pressed="active.justifyRight"
+        :class="{ active: active.justifyRight }"
+        @click="runBlock('justifyRight')"
+      >
+        ⯈
+      </button>
+      <button type="button" class="chip" title="Outdent" aria-label="Outdent" @click="runBlock('outdent')">
+        ⇤
+      </button>
+      <button type="button" class="chip" title="Indent" aria-label="Indent" @click="runBlock('indent')">
+        ⇥
+      </button>
+    </div>
+
+    <div class="sep" role="separator" />
+
+    <div class="label" id="fm-fontsize">Font size</div>
+    <div class="row" role="group" aria-labelledby="fm-fontsize">
       <button type="button" class="chip" title="Small" @click="setFontSize('1')">
         S
       </button>
@@ -204,14 +503,15 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
-    <div class="sep" />
+    <div class="sep" role="separator" />
 
-    <div class="label">Text colour</div>
-    <div class="row">
+    <div class="label" id="fm-textcolor">Text colour</div>
+    <div class="row" role="group" aria-labelledby="fm-textcolor">
       <button
         type="button"
         class="swatch none"
         title="No text colour"
+        aria-label="No text colour"
         @click="applyColor('foreColor', DEFAULT_TEXT_COLOR)"
       >⦸</button>
       <button
@@ -221,16 +521,18 @@ onBeforeUnmount(() => {
         class="swatch"
         :style="{ background: c }"
         :title="'Text ' + c"
+        :aria-label="'Text colour ' + c"
         @click="applyColor('foreColor', c)"
       />
     </div>
 
-    <div class="label">Highlight</div>
-    <div class="row">
+    <div class="label" id="fm-highlight">Highlight</div>
+    <div class="row" role="group" aria-labelledby="fm-highlight">
       <button
         type="button"
         class="swatch none"
         title="No highlight"
+        aria-label="No highlight"
         @click="applyColor('hiliteColor', 'transparent')"
       >⦸</button>
       <button
@@ -240,13 +542,14 @@ onBeforeUnmount(() => {
         class="swatch"
         :style="{ background: c }"
         :title="'Highlight ' + c"
+        :aria-label="'Highlight ' + c"
         @click="applyColor('hiliteColor', c)"
       />
     </div>
 
-    <div class="sep" />
+    <div class="sep" role="separator" />
 
-    <button type="button" class="item" @click="run('removeFormat')">
+    <button type="button" class="item" role="menuitem" @click="run('removeFormat')">
       ✕ Clear formatting
     </button>
   </div>
@@ -257,6 +560,8 @@ onBeforeUnmount(() => {
   position: fixed;
   z-index: 1000;
   min-width: 200px;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
   background: #fff;
   border: 1px solid var(--sidebar-border, #e1dfdd);
   border-radius: 8px;
@@ -309,6 +614,18 @@ onBeforeUnmount(() => {
 .chip:hover,
 .item:hover {
   background: #f3f2f1;
+}
+
+/* Pressed/active toggle state (mirrors aria-pressed="true"). */
+.icon.active,
+.chip.active {
+  background: #f2e7fa;
+  border-color: var(--accent, #7719aa);
+  color: var(--accent, #7719aa);
+}
+.item.active {
+  background: #f2e7fa;
+  color: var(--accent, #7719aa);
 }
 
 .item {

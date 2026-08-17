@@ -26,11 +26,21 @@ const ALLOWED_TAGS = [
   'u',
   's',
   'strike',
+  'sub',
+  'sup',
+  'code',
+  'pre',
   'br',
+  'hr',
   'div',
   'p',
   'span',
   'font',
+  'a',
+  'h1',
+  'h2',
+  'h3',
+  'blockquote',
   'ul',
   'ol',
   'li',
@@ -39,9 +49,22 @@ const ALLOWED_TAGS = [
 
 /**
  * Attributes we allow. `style`/`color` carry execCommand's colour + font-size
- * output; the checkbox attributes keep tick boxes interactive and persistable.
+ * output; `href`/`target`/`rel` support links; the checkbox attributes keep
+ * tick boxes interactive and persistable.
  */
-const ALLOWED_ATTR = ['style', 'color', 'size', 'face', 'class', 'type', 'checked']
+const ALLOWED_ATTR = [
+  'style',
+  'color',
+  'size',
+  'face',
+  'align',
+  'class',
+  'type',
+  'checked',
+  'href',
+  'target',
+  'rel'
+]
 
 /**
  * Sanitize a rich-text HTML string down to the editor's safe allowlist.
@@ -53,11 +76,13 @@ export function sanitizeBoxHtml(dirty: string): string {
     ALLOWED_TAGS,
     ALLOWED_ATTR,
     // Tick boxes are `<input type="checkbox">`; keep them but nothing else.
-    ADD_ATTR: ['checked'],
+    ADD_ATTR: ['checked', 'target'],
     // Never allow anything that could load/execute external resources.
+    // `href` stays allowed (links); DOMPurify still strips javascript: URIs.
     FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'img'],
-    FORBID_ATTR: ['srcdoc', 'src', 'href', 'formaction', 'action'],
+    FORBID_ATTR: ['srcdoc', 'src', 'formaction', 'action'],
     ALLOW_DATA_ATTR: false
   })
 }
+
 

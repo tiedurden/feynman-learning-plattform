@@ -219,6 +219,45 @@ defineExpose({
   vertical-align: middle;
 }
 
+/* Rich-text block/inline elements produced by the formatting menu. */
+.text-box :deep(h1) {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 0.2em 0;
+}
+.text-box :deep(h2) {
+  font-size: 1.3em;
+  font-weight: 600;
+  margin: 0.2em 0;
+}
+.text-box :deep(h3) {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin: 0.2em 0;
+}
+.text-box :deep(blockquote) {
+  margin: 0.3em 0;
+  padding: 0.1em 0 0.1em 0.7em;
+  border-left: 3px solid var(--accent, #7719aa);
+  color: var(--text-muted, #605e5c);
+}
+.text-box :deep(code) {
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 0.92em;
+  background: #f3f2f1;
+  border-radius: 3px;
+  padding: 0 4px;
+}
+.text-box :deep(hr) {
+  border: none;
+  border-top: 1px solid var(--sidebar-border, #e1dfdd);
+  margin: 0.5em 0;
+}
+.text-box :deep(a) {
+  color: var(--accent, #7719aa);
+  text-decoration: underline;
+}
+
 /* A brand-new, not-yet-saved box is clearly visible so you know it worked. */
 .text-box.is-draft {
   border-color: var(--accent, #7719aa);
