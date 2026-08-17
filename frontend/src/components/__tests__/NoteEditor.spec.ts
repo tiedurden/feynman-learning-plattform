@@ -62,9 +62,10 @@ describe('NoteEditor — text box behaviour', () => {
     const wrapper = mountEditor(page, pinia)
 
     await wrapper.get('.canvas').trigger('mousedown')
-    const textarea = wrapper.get('textarea')
-    await textarea.setValue('Buy milk')
-    await textarea.trigger('blur')
+    const box = wrapper.get('.text-box')
+    box.element.innerHTML = 'Buy milk'
+    await box.trigger('input')
+    await box.trigger('blur')
 
     const saved = store.pageById(page.id)!.boxes
     expect(saved).toHaveLength(1)
@@ -77,7 +78,7 @@ describe('NoteEditor — text box behaviour', () => {
     const wrapper = mountEditor(page, pinia)
 
     await wrapper.get('.canvas').trigger('mousedown')
-    await wrapper.get('textarea').trigger('blur')
+    await wrapper.get('.text-box').trigger('blur')
 
     expect(store.pageById(page.id)!.boxes).toHaveLength(0)
     expect(wrapper.findComponent(TextBoxItem).exists()).toBe(false)
@@ -89,9 +90,10 @@ describe('NoteEditor — text box behaviour', () => {
     const wrapper = mountEditor(page, pinia)
 
     await wrapper.get('.canvas').trigger('mousedown')
-    const textarea = wrapper.get('textarea')
-    await textarea.setValue('   ')
-    await textarea.trigger('blur')
+    const box = wrapper.get('.text-box')
+    box.element.innerHTML = '   '
+    await box.trigger('input')
+    await box.trigger('blur')
 
     expect(store.pageById(page.id)!.boxes).toHaveLength(0)
     wrapper.unmount()
@@ -114,10 +116,9 @@ describe('NoteEditor — text box behaviour', () => {
     store.addTextBox(page.id, { x: 10, y: 10, text: 'Old' })
     const wrapper = mountEditor(page, pinia)
 
-    // Saved boxes start in display mode — click to reveal the textarea.
-    await wrapper.get('.text-display').trigger('click')
-    const textarea = wrapper.get('textarea')
-    await textarea.setValue('New text')
+    const box = wrapper.get('.text-box')
+    box.element.innerHTML = 'New text'
+    await box.trigger('input')
 
     expect(store.pageById(page.id)!.boxes[0].text).toBe('New text')
     wrapper.unmount()
@@ -128,11 +129,10 @@ describe('NoteEditor — text box behaviour', () => {
     store.addTextBox(page.id, { x: 10, y: 10, text: 'Old' })
     const wrapper = mountEditor(page, pinia)
 
-    // Saved boxes start in display mode — click to reveal the textarea.
-    await wrapper.get('.text-display').trigger('click')
-    const textarea = wrapper.get('textarea')
-    await textarea.setValue('')
-    await textarea.trigger('blur')
+    const box = wrapper.get('.text-box')
+    box.element.innerHTML = ''
+    await box.trigger('input')
+    await box.trigger('blur')
 
     expect(store.pageById(page.id)!.boxes).toHaveLength(0)
     wrapper.unmount()

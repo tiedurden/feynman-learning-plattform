@@ -46,4 +46,3 @@ export async function evaluateNotes(
 
   return (await res.json()) as EvaluationResult
 }
-

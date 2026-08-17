@@ -84,4 +84,3 @@ mvn test
 ```
 
 The service's mock scoring path is covered without needing an API key.
-
