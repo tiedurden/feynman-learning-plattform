@@ -206,7 +206,7 @@ describe('notesStore — inline references (links)', () => {
 
     const saved = store.pageById(page.id)!.boxes[0]
     expect(saved.text).toBe('See Napoleon here')
-    expect(saved.references[0]).toEqual(
+    expect(saved.references![0]).toEqual(
       expect.objectContaining({ start: 4, end: 12, targetPageId: target.id })
     )
   })
@@ -237,7 +237,7 @@ describe('notesStore — inline references (links)', () => {
 
     store.updateBoxReference(page.id, box.id, ref.id, { targetPageId: other.id })
 
-    expect(store.pageById(page.id)!.boxes[0].references[0].targetPageId).toBe(other.id)
+    expect(store.pageById(page.id)!.boxes[0].references![0].targetPageId).toBe(other.id)
   })
 
   it('updates a reference text, shifting later references', () => {
@@ -259,8 +259,8 @@ describe('notesStore — inline references (links)', () => {
 
     const saved = store.pageById(page.id)!.boxes[0]
     expect(saved.text).toBe('AAAA BB CC')
-    const first = saved.references.find((r) => r.id === r1.id)!
-    const second = saved.references.find((r) => r.id !== r1.id)!
+    const first = saved.references!.find((r) => r.id === r1.id)!
+    const second = saved.references!.find((r) => r.id !== r1.id)!
     expect(first).toEqual(expect.objectContaining({ start: 0, end: 4 }))
     expect(second).toEqual(expect.objectContaining({ start: 8, end: 10 }))
   })

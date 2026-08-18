@@ -12,10 +12,9 @@ let queryCommandState: ReturnType<typeof vi.fn>
 beforeEach(() => {
   execCommand = vi.fn().mockReturnValue(true)
   queryCommandState = vi.fn().mockReturnValue(false)
-  // @ts-expect-error - not present in jsdom's Document typings
-  document.execCommand = execCommand
-  // @ts-expect-error - not present in jsdom's Document typings
-  document.queryCommandState = queryCommandState
+  document.execCommand = execCommand as unknown as typeof document.execCommand
+  document.queryCommandState =
+    queryCommandState as unknown as typeof document.queryCommandState
 })
 
 const props = { x: 100, y: 100 }
