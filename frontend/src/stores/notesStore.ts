@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import type { Notebook, NotebookTree, Page, PageNode, TextBox, TextReference } from '@/types'
 import { seedNotebooks, seedPages } from '@/data/seed'
+import { sanitizeBoxHtml } from '@/utils/sanitizeHtml'
 
 const STORAGE_KEY = 'onenote-notes:v2'
 /** Separate key for lightweight UI preferences (progress toggle, etc.). */
@@ -239,7 +240,12 @@ export const useNotesStore = defineStore('notes', {
       const page = this.pages.find((p) => p.id === pageId)
       if (!page) return
       if (!page.boxes) page.boxes = []
-      const tb: TextBox = { id: uid('tb'), references: [], ...box }
+      const tb: TextBox = {
+        id: uid('tb'),
+        references: [],
+        ...box,
+        text: sanitizeBoxHtml(box.text ?? '')
+      }
       page.boxes.push(tb)
       this.persist()
       return tb
@@ -253,17 +259,26 @@ export const useNotesStore = defineStore('notes', {
       const page = this.pages.find((p) => p.id === pageId)
       const box = page?.boxes?.find((b) => b.id === boxId)
       if (box) {
+        // Sanitize incoming rich-text before it is stored/persisted.
+        const cleanPatch =
+          patch.text !== undefined
+            ? { ...patch, text: sanitizeBoxHtml(patch.text) }
+            : patch
         // When the text changes, drop any inline reference whose linked
         // substring no longer matches its recorded offsets (best-effort sync).
-        if (patch.text !== undefined && patch.text !== box.text && box.references?.length) {
+        if (
+          cleanPatch.text !== undefined &&
+          cleanPatch.text !== box.text &&
+          box.references?.length
+        ) {
           const oldText = box.text
-          const newText = patch.text
+          const newText = cleanPatch.text
           box.references = box.references.filter((ref) => {
             const oldSub = oldText.slice(ref.start, ref.end)
             return newText.slice(ref.start, ref.end) === oldSub
           })
         }
-        Object.assign(box, patch)
+        Object.assign(box, cleanPatch)
         this.persist()
       }
     },

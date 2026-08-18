@@ -9,4 +9,3 @@ public record NotebookDto(
         String color
 ) {
 }
-

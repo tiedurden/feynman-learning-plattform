@@ -31,4 +31,3 @@ public record PageDto(
         return sb.toString().trim();
     }
 }
-

@@ -20,4 +20,3 @@ public class FeynmanBackendApplication {
         SpringApplication.run(FeynmanBackendApplication.class, args);
     }
 }
-

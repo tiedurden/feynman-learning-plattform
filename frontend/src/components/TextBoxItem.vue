@@ -1,148 +1,124 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import type { TextReference } from '@/types'
+import { onMounted, ref, watch } from 'vue'
+import { sanitizeBoxHtml } from '@/utils/sanitizeHtml'
 
 const props = defineProps<{
   offsetXInPixels: number
   offsetYInPixels: number
+  /** Rich-text HTML content of the box. */
   text: string
   widthInPixels?: number
   isDraft?: boolean
   focusOnMount?: boolean
-  references?: TextReference[]
 }>()
 
 const emit = defineEmits<{
   (e: 'update:text', value: string): void
   (e: 'blur'): void
   (e: 'drag-start', event: MouseEvent): void
-  (e: 'request-link', payload: { start: number; end: number; x: number; y: number }): void
-  (e: 'request-link-menu', payload: { referenceId: string; x: number; y: number }): void
-  (e: 'ref-click', targetPageId: string): void
-  (e: 'ref-hover', payload: { targetPageId: string; rect: DOMRect }): void
-  (e: 'ref-leave'): void
+  (e: 'request-format', event: MouseEvent): void
 }>()
 
-const textareaEl = ref<HTMLTextAreaElement | null>(null)
-
-// Drafts are always editable; saved boxes start in read-only display mode and
-// switch to an editable textarea when clicked.
-const editing = ref<boolean>(!!props.isDraft)
+const editableEl = ref<HTMLDivElement | null>(null)
 
 /**
- * Split the box text into plain + linked segments using the reference offsets.
- * Overlapping/out-of-bounds refs are skipped defensively.
+ * Restore checkbox `.checked` *properties* from the persisted `checked`
+ * attribute. `innerHTML` only carries attributes, so without this a saved,
+ * ticked box would render unchecked after a reload.
  */
-interface Segment {
-  text: string
-  targetPageId?: string
-  referenceId?: string
+function restoreCheckboxes(el: HTMLElement) {
+  el.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((cb) => {
+    cb.checked = cb.hasAttribute('checked')
+  })
 }
-const segments = computed<Segment[]>(() => {
-  const refs = (props.references ?? [])
-    .filter((r) => r.start >= 0 && r.end <= props.text.length && r.start < r.end)
-    .slice()
-    .sort((a, b) => a.start - b.start)
 
-  const out: Segment[] = []
-  let cursor = 0
-  for (const ref of refs) {
-    if (ref.start < cursor) continue // skip overlap
-    if (ref.start > cursor) out.push({ text: props.text.slice(cursor, ref.start) })
-    out.push({
-      text: props.text.slice(ref.start, ref.end),
-      targetPageId: ref.targetPageId,
-      referenceId: ref.id
-    })
-    cursor = ref.end
-  }
-  if (cursor < props.text.length) out.push({ text: props.text.slice(cursor) })
-  return out
-})
-
-function resizeToFitContent() {
-  const el = textareaEl.value
+/**
+ * Push the prop HTML into the DOM without clobbering the caret. We only write
+ * when the incoming value actually differs from what is rendered, and never
+ * while the element is focused (that would reset the user's cursor). Incoming
+ * HTML is sanitized defensively before it touches the DOM.
+ */
+function syncFromProp() {
+  const el = editableEl.value
   if (!el) return
-  el.style.height = 'auto'
-  el.style.height = `${el.scrollHeight}px`
+  const next = sanitizeBoxHtml(props.text ?? '')
+  if (el.innerHTML !== next) el.innerHTML = next
+  restoreCheckboxes(el)
 }
 
-function handleInput(event: Event) {
-  emit('update:text', (event.target as HTMLTextAreaElement).value)
-  resizeToFitContent()
-}
-
-function onTextareaBlur() {
-  if (!props.isDraft) editing.value = false
-  emit('blur')
-}
-
-/** Right-click inside the textarea with an active selection → offer linking. */
-function onContextMenu(event: MouseEvent) {
-  const el = textareaEl.value
+function emitContent() {
+  const el = editableEl.value
   if (!el) return
-  const start = el.selectionStart
-  const end = el.selectionEnd
-  if (start != null && end != null && end > start) {
-    event.preventDefault()
-    emit('request-link', { start, end, x: event.clientX, y: event.clientY })
-  }
+  emit('update:text', sanitizeBoxHtml(el.innerHTML))
 }
 
-/** Enter edit mode when the (non-link) display area is clicked. */
-function enterEdit() {
-  if (props.isDraft) return
-  editing.value = true
+function handleInput() {
+  emitContent()
 }
 
-function onLinkClick(targetPageId: string | undefined, event: MouseEvent) {
-  if (!targetPageId) return
-  event.stopPropagation()
-  emit('ref-click', targetPageId)
-}
-
-function onLinkEnter(targetPageId: string | undefined, event: MouseEvent) {
-  if (!targetPageId) return
-  const rect = (event.target as HTMLElement).getBoundingClientRect()
-  emit('ref-hover', { targetPageId, rect })
-}
-
-/** Right-click an existing link → offer edit / remove. */
-function onLinkContextMenu(referenceId: string | undefined, event: MouseEvent) {
-  if (!referenceId) return
+/**
+ * Intercept paste so rich clipboard HTML is sanitized (or dropped to plain
+ * text) instead of letting the browser insert arbitrary markup verbatim.
+ */
+function handlePaste(event: ClipboardEvent) {
   event.preventDefault()
-  event.stopPropagation()
-  emit('request-link-menu', { referenceId, x: event.clientX, y: event.clientY })
+  const data = event.clipboardData
+  if (!data) return
+  const html = data.getData('text/html')
+  const clean = html
+    ? sanitizeBoxHtml(html)
+    : escapePlainText(data.getData('text/plain'))
+  document.execCommand('insertHTML', false, clean)
+}
+
+/** Escape plain-text so it inserts literally (no accidental markup). */
+function escapePlainText(text: string): string {
+  const div = document.createElement('div')
+  div.textContent = text
+  return div.innerHTML
+}
+
+/**
+ * Tick boxes are rendered as real checkboxes. Toggling one only flips the DOM
+ * `.checked` *property*, which is invisible to `innerHTML`. We mirror it onto
+ * the `checked` *attribute* so the state survives persistence, then re-emit.
+ */
+function handleChange(event: Event) {
+  const target = event.target
+  if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+    if (target.checked) target.setAttribute('checked', '')
+    else target.removeAttribute('checked')
+    emitContent()
+  }
+}
+
+function placeCaretAtEnd() {
+  const el = editableEl.value
+  if (!el) return
+  el.focus()
+  const range = document.createRange()
+  range.selectNodeContents(el)
+  range.collapse(false)
+  const sel = window.getSelection()
+  sel?.removeAllRanges()
+  sel?.addRange(range)
 }
 
 onMounted(() => {
-  if (editing.value) {
-    resizeToFitContent()
-    if (props.focusOnMount) textareaEl.value?.focus()
-  }
+  syncFromProp()
+  if (props.focusOnMount) placeCaretAtEnd()
 })
 
-// Focus + size the textarea whenever we switch into edit mode.
-watch(editing, async (isEditing) => {
-  if (isEditing) {
-    await nextTick()
-    resizeToFitContent()
-    textareaEl.value?.focus()
-  }
-})
-
+// Reflect external text changes only while the user isn't actively editing.
 watch(
   () => props.text,
   () => {
-    if (editing.value) resizeToFitContent()
+    if (document.activeElement !== editableEl.value) syncFromProp()
   }
 )
 
 defineExpose({
-  focus: () => {
-    editing.value = true
-    nextTick(() => textareaEl.value?.focus())
-  }
+  focus: () => editableEl.value?.focus()
 })
 </script>
 
@@ -161,36 +137,20 @@ defineExpose({
       title="Drag to move"
       @mousedown="emit('drag-start', $event)"
     >⠿</span>
-
-    <!-- Edit mode: raw text in a textarea (selection → context-menu linking). -->
-    <textarea
-      v-if="editing"
-      ref="textareaEl"
+    <div
+      ref="editableEl"
       class="text-box"
       :class="{ 'is-draft': isDraft }"
-      :value="text"
-      rows="1"
+      contenteditable="true"
       spellcheck="false"
-      :placeholder="isDraft ? 'Type here…' : ''"
+      role="textbox"
+      :data-placeholder="isDraft ? 'Type here…' : ''"
       @input="handleInput"
-      @blur="onTextareaBlur"
-      @contextmenu="onContextMenu"
+      @change="handleChange"
+      @paste="handlePaste"
+      @blur="emit('blur')"
+      @contextmenu="emit('request-format', $event)"
     />
-
-    <!-- Display mode: plain text with inline reference links. -->
-    <div v-else class="text-display" @click="enterEdit">
-      <template v-for="(seg, i) in segments" :key="i">
-        <a
-          v-if="seg.targetPageId"
-          class="ref-link"
-          @click="onLinkClick(seg.targetPageId, $event)"
-          @mouseenter="onLinkEnter(seg.targetPageId, $event)"
-          @mouseleave="emit('ref-leave')"
-          @contextmenu="onLinkContextMenu(seg.referenceId, $event)"
-        >{{ seg.text }}</a>
-        <span v-else>{{ seg.text }}</span>
-      </template>
-    </div>
   </div>
 </template>
 
@@ -223,8 +183,6 @@ defineExpose({
   border: 1px solid transparent;
   border-radius: 4px;
   outline: none;
-  resize: none;
-  overflow: hidden;
   padding: 4px 6px;
   background: transparent;
   font-family: inherit;
@@ -232,6 +190,8 @@ defineExpose({
   line-height: 1.5;
   color: var(--text);
   box-sizing: border-box;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 .text-box:hover {
   border-color: var(--sidebar-border);
@@ -241,8 +201,61 @@ defineExpose({
   background: #fff;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
 }
-.text-box::placeholder {
+/* Placeholder for an empty editable element. */
+.text-box:empty::before {
+  content: attr(data-placeholder);
   color: #c8c6c4;
+  pointer-events: none;
+}
+
+/* Tick boxes sit inline with the text. */
+.text-box :deep(.tick) {
+  display: inline-block;
+  vertical-align: middle;
+}
+.text-box :deep(.tick input) {
+  margin: 0 2px 0 0;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+/* Rich-text block/inline elements produced by the formatting menu. */
+.text-box :deep(h1) {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 0.2em 0;
+}
+.text-box :deep(h2) {
+  font-size: 1.3em;
+  font-weight: 600;
+  margin: 0.2em 0;
+}
+.text-box :deep(h3) {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin: 0.2em 0;
+}
+.text-box :deep(blockquote) {
+  margin: 0.3em 0;
+  padding: 0.1em 0 0.1em 0.7em;
+  border-left: 3px solid var(--accent, #7719aa);
+  color: var(--text-muted, #605e5c);
+}
+.text-box :deep(code) {
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 0.92em;
+  background: #f3f2f1;
+  border-radius: 3px;
+  padding: 0 4px;
+}
+.text-box :deep(hr) {
+  border: none;
+  border-top: 1px solid var(--sidebar-border, #e1dfdd);
+  margin: 0.5em 0;
+}
+.text-box :deep(a) {
+  color: var(--accent, #7719aa);
+  text-decoration: underline;
 }
 
 /* A brand-new, not-yet-saved box is clearly visible so you know it worked. */
@@ -252,36 +265,20 @@ defineExpose({
   background: #fff;
   min-height: 32px;
 }
+</style>
 
-/* Display mode mirrors the textarea metrics so switching feels seamless. */
-.text-display {
-  min-width: 160px;
-  max-width: 520px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  padding: 4px 6px;
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--text);
-  white-space: pre-wrap;
-  word-break: break-word;
-  cursor: text;
-  box-sizing: border-box;
-}
-.text-display:hover {
-  border-color: var(--sidebar-border);
-}
-
-.ref-link {
-  color: var(--accent, #7719aa);
-  text-decoration: underline;
-  text-decoration-color: rgba(119, 25, 170, 0.4);
-  cursor: pointer;
-}
-.ref-link:hover {
-  text-decoration-color: var(--accent, #7719aa);
-  background: rgba(119, 25, 170, 0.08);
-  border-radius: 2px;
+<!--
+  Non-scoped so it can reach the browser's ::selection pseudo-element on the
+  editable and its descendants. A translucent selection (with inherited text
+  colour) lets a freshly applied text/highlight colour show through *while the
+  text is still selected*, so formatting looks reactive instead of only
+  appearing once the selection clears.
+-->
+<style>
+.text-box::selection,
+.text-box *::selection {
+  background: rgba(46, 118, 220, 0.25);
+  color: inherit;
 }
 </style>
 
