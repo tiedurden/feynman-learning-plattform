@@ -60,12 +60,13 @@ describe('FormatMenu', () => {
       expect(execCommand).toHaveBeenCalledWith('hiliteColor', false, 'transparent')
     })
 
-    it('prompts for and normalises a link URL', async () => {
-      const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('example.com')
+    it('requests the shared link dialog instead of inserting inline', async () => {
       const wrapper = mount(FormatMenu, { props })
       await wrapper.get('[title="Insert link (Ctrl+K)"]').trigger('click')
-      expect(promptSpy).toHaveBeenCalled()
-      expect(execCommand).toHaveBeenCalledWith('createLink', false, 'https://example.com')
+      // The host (NoteEditor) now owns link insertion; the menu only asks.
+      expect(wrapper.emitted('request-link')).toHaveLength(1)
+      expect(wrapper.emitted('request-link')![0][0]).toHaveProperty('text')
+      expect(execCommand).not.toHaveBeenCalledWith('createLink', false, expect.anything())
     })
   })
 
