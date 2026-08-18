@@ -3,6 +3,14 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { NotebookTree } from '@/types'
 import NotebookTreePicker from './NotebookTreePicker.vue'
 
+/** Which kind of link the dialog is currently authoring. */
+type LinkKind = 'web' | 'page'
+
+/** Discriminated confirm payload: an external URL or an internal page id. */
+type ConfirmPayload =
+  | { linkText: string; url: string }
+  | { linkText: string; targetPageId: string }
+
 const props = withDefaults(
   defineProps<{
     open: boolean
@@ -11,23 +19,41 @@ const props = withDefaults(
     notebookTrees: NotebookTree[]
     /** Pre-selected target page (edit mode). */
     initialTargetPageId?: string
+    /** Pre-filled URL for web links (edit mode). */
+    initialUrl?: string
+    /** Which tab to open on first render. */
+    initialKind?: LinkKind
     /** 'create' (default) or 'edit' — changes titles/labels only. */
     mode?: 'create' | 'edit'
   }>(),
-  { initialTargetPageId: undefined, mode: 'create' }
+  {
+    initialTargetPageId: undefined,
+    initialUrl: undefined,
+    initialKind: 'page',
+    mode: 'create'
+  }
 )
 
 const emit = defineEmits<{
-  (e: 'confirm', payload: { linkText: string; targetPageId: string }): void
+  (e: 'confirm', payload: ConfirmPayload): void
   (e: 'cancel'): void
 }>()
 
 const linkText = ref(props.initialText)
+const linkKind = ref<LinkKind>(props.initialKind)
+const url = ref('')
 const selectedPageId = ref<string | undefined>(undefined)
 const inputEl = ref<HTMLInputElement | null>(null)
+const urlEl = ref<HTMLInputElement | null>(null)
 
 const dialogTitle = computed(() => (props.mode === 'edit' ? 'Edit link' : 'Create link'))
 const submitLabel = computed(() => (props.mode === 'edit' ? 'Save link' : 'Create link'))
+
+/** Whether the current tab has enough input to confirm. */
+const canConfirm = computed(() => {
+  if (!linkText.value.trim()) return false
+  return linkKind.value === 'web' ? url.value.trim().length > 0 : !!selectedPageId.value
+})
 
 // Reset local state each time the modal is (re)opened.
 watch(
@@ -35,6 +61,8 @@ watch(
   async (isOpen) => {
     if (isOpen) {
       linkText.value = props.initialText
+      linkKind.value = props.initialKind
+      url.value = props.initialUrl ?? ''
       selectedPageId.value = props.initialTargetPageId
       await Promise.resolve()
       inputEl.value?.focus()
@@ -50,9 +78,19 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => document.addEventListener('keydown', onKeydown))
 onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 
+/** Normalise a user-typed URL to a safe absolute form. */
+function normalizeUrl(input: string): string {
+  const trimmed = input.trim()
+  return /^(https?:|mailto:)/i.test(trimmed) ? trimmed : `https://${trimmed}`
+}
+
 function confirm() {
-  if (!selectedPageId.value || !linkText.value.trim()) return
-  emit('confirm', { linkText: linkText.value, targetPageId: selectedPageId.value })
+  if (!canConfirm.value) return
+  if (linkKind.value === 'web') {
+    emit('confirm', { linkText: linkText.value, url: normalizeUrl(url.value) })
+  } else {
+    emit('confirm', { linkText: linkText.value, targetPageId: selectedPageId.value! })
+  }
 }
 </script>
 
@@ -69,6 +107,27 @@ function confirm() {
         <div class="dialog">
           <h2 class="dialog-title">{{ dialogTitle }}</h2>
 
+          <div class="kind-tabs" role="tablist" aria-label="Link type">
+            <button
+              class="kind-tab"
+              :class="{ active: linkKind === 'page' }"
+              role="tab"
+              :aria-selected="linkKind === 'page'"
+              @click="linkKind = 'page'"
+            >
+              📄 Page
+            </button>
+            <button
+              class="kind-tab"
+              :class="{ active: linkKind === 'web' }"
+              role="tab"
+              :aria-selected="linkKind === 'web'"
+              @click="linkKind = 'web'"
+            >
+              🌐 Web URL
+            </button>
+          </div>
+
           <label class="field">
             <span class="field-label">Link text</span>
             <input
@@ -81,7 +140,20 @@ function confirm() {
             />
           </label>
 
-          <div class="field">
+          <label v-if="linkKind === 'web'" class="field">
+            <span class="field-label">URL</span>
+            <input
+              ref="urlEl"
+              v-model="url"
+              class="text-input"
+              type="text"
+              spellcheck="false"
+              placeholder="https://example.com"
+              @keydown.enter.prevent="confirm"
+            />
+          </label>
+
+          <div v-else class="field">
             <span class="field-label">Link to page</span>
             <NotebookTreePicker
               :notebook-trees="notebookTrees"
@@ -94,7 +166,7 @@ function confirm() {
             <button class="btn" @click="emit('cancel')">Cancel</button>
             <button
               class="btn btn-primary"
-              :disabled="!selectedPageId || !linkText.trim()"
+              :disabled="!canConfirm"
               @click="confirm"
             >
               {{ submitLabel }}
@@ -127,6 +199,31 @@ function confirm() {
   margin: 0 0 14px;
   font-size: 17px;
   font-weight: 600;
+}
+.kind-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--sidebar-border, #e1dfdd);
+}
+.kind-tab {
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #605e5c);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.kind-tab:hover {
+  color: var(--text, #201f1e);
+}
+.kind-tab.active {
+  color: var(--accent, #7719aa);
+  border-bottom-color: var(--accent, #7719aa);
 }
 .field {
   display: block;

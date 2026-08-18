@@ -76,7 +76,9 @@ export function sanitizeBoxHtml(dirty: string): string {
     ALLOWED_TAGS,
     ALLOWED_ATTR,
     // Tick boxes are `<input type="checkbox">`; keep them but nothing else.
-    ADD_ATTR: ['checked', 'target'],
+    // `data-page-id` tags internal page links (Option A) so they survive
+    // sanitization while `ALLOW_DATA_ATTR` stays off for everything else.
+    ADD_ATTR: ['checked', 'target', 'data-page-id'],
     // Never allow anything that could load/execute external resources.
     // `href` stays allowed (links); DOMPurify still strips javascript: URIs.
     FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'img'],
