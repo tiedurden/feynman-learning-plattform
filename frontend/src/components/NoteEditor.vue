@@ -4,6 +4,16 @@ import type { Page, TextBox } from '@/types'
 import { useNotesStore } from '@/stores/notesStore'
 import TextBoxItem from './TextBoxItem.vue'
 import FormatMenu from './FormatMenu.vue'
+import ReferenceModal from './ReferenceModal.vue'
+import RefTooltip from './RefTooltip.vue'
+import LinkContextMenu from './LinkContextMenu.vue'
+
+/** Matches LinkContextMenu's item shape (label + optional destructive + action). */
+interface LinkMenuItem {
+  label: string
+  danger?: boolean
+  action: () => void
+}
 
 const props = defineProps<{
   page?: Page
@@ -11,6 +21,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update', patch: Partial<Pick<Page, 'title'>>): void
+  /** Navigate to another page (Ctrl/Cmd-click on an internal link). */
+  (e: 'navigate', pageId: string): void
 }>()
 
 const store = useNotesStore()
@@ -67,6 +79,147 @@ function closeFormatMenu() {
 
 function onOutsideMenuClick(e: MouseEvent) {
   if (!(e.target as HTMLElement).closest('.format-menu')) closeFormatMenu()
+}
+
+// --- Shared link dialog (external URL + internal page) ----------------------
+const linkDialogOpen = ref(false)
+const linkDialogText = ref('')
+const linkDialogMode = ref<'create' | 'edit'>('create')
+const linkInitKind = ref<'web' | 'page'>('page')
+const linkInitUrl = ref<string | undefined>(undefined)
+const linkInitPageId = ref<string | undefined>(undefined)
+/** Selection captured when the dialog opens, restored before insertion. */
+let linkRange: Range | null = null
+
+const notebookTrees = computed(() => store.allNotebookTrees)
+
+/** FormatMenu asked to link the current selection — snapshot it, open dialog. */
+function onRequestLink(payload: { text: string }) {
+  const sel = window.getSelection()
+  linkRange = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null
+  linkDialogText.value = payload.text
+  linkDialogMode.value = 'create'
+  linkInitKind.value = 'page'
+  linkInitUrl.value = undefined
+  linkInitPageId.value = undefined
+  closeFormatMenu()
+  linkDialogOpen.value = true
+}
+
+function closeLinkDialog() {
+  linkDialogOpen.value = false
+  linkRange = null
+  linkDialogMode.value = 'create'
+}
+
+/** Reinstate the saved selection so insertion targets the right editable. */
+function restoreLinkRange(): HTMLElement | null {
+  if (!linkRange) return null
+  const node = linkRange.commonAncestorContainer
+  const host = (node instanceof Element ? node : node.parentElement)?.closest(
+    '[contenteditable="true"]'
+  ) as HTMLElement | null
+  host?.focus()
+  const sel = window.getSelection()
+  sel?.removeAllRanges()
+  sel?.addRange(linkRange)
+  return host
+}
+
+/** Build and insert an anchor over the saved range, then persist the change. */
+function insertLinkAnchor(anchor: HTMLAnchorElement) {
+  const host = restoreLinkRange()
+  if (!linkRange) return
+  linkRange.deleteContents()
+  linkRange.insertNode(anchor)
+  // Drop the caret just after the inserted link.
+  const after = document.createRange()
+  after.setStartAfter(anchor)
+  after.collapse(true)
+  const sel = window.getSelection()
+  sel?.removeAllRanges()
+  sel?.addRange(after)
+  // Notify the owning editable so TextBoxItem re-emits sanitized HTML.
+  host?.dispatchEvent(new Event('input', { bubbles: true }))
+}
+
+function onLinkConfirm(
+  payload: { linkText: string; url: string } | { linkText: string; targetPageId: string }
+) {
+  const anchor = document.createElement('a')
+  anchor.textContent = payload.linkText || ('url' in payload ? payload.url : 'link')
+  if ('url' in payload) {
+    anchor.setAttribute('href', payload.url)
+    anchor.setAttribute('target', '_blank')
+    anchor.setAttribute('rel', 'noopener noreferrer')
+  } else {
+    anchor.setAttribute('class', 'page-link')
+    anchor.setAttribute('data-page-id', payload.targetPageId)
+  }
+  insertLinkAnchor(anchor)
+  closeLinkDialog()
+}
+
+// --- Link edit / remove context menu ----------------------------------------
+const linkMenu = ref<{ x: number; y: number } | null>(null)
+/** The anchor targeted by the currently open link context menu. */
+let menuAnchor: HTMLAnchorElement | null = null
+
+const linkMenuItems = computed<LinkMenuItem[]>(() => [
+  { label: 'Edit link…', action: editCurrentLink },
+  { label: 'Remove link', danger: true, action: removeCurrentLink }
+])
+
+/** TextBoxItem right-clicked an existing link — show the edit/remove menu. */
+function onRequestLinkMenu(payload: { x: number; y: number; anchor: HTMLAnchorElement }) {
+  menuAnchor = payload.anchor
+  linkMenu.value = { x: payload.x, y: payload.y }
+}
+
+function closeLinkMenu() {
+  linkMenu.value = null
+  menuAnchor = null
+}
+
+/** Open the shared dialog pre-filled from the targeted anchor (edit mode). */
+function editCurrentLink() {
+  const anchor = menuAnchor
+  linkMenu.value = null
+  if (!anchor) return
+  // A range spanning the whole anchor so confirming replaces it in place.
+  const range = document.createRange()
+  range.selectNode(anchor)
+  linkRange = range
+  const pageId = anchor.getAttribute('data-page-id')
+  linkDialogText.value = anchor.textContent ?? ''
+  linkInitKind.value = pageId ? 'page' : 'web'
+  linkInitUrl.value = pageId ? undefined : (anchor.getAttribute('href') ?? undefined)
+  linkInitPageId.value = pageId ?? undefined
+  linkDialogMode.value = 'edit'
+  linkDialogOpen.value = true
+  menuAnchor = null
+}
+
+/** Unwrap the targeted anchor, leaving its text behind, then persist. */
+function removeCurrentLink() {
+  const anchor = menuAnchor
+  closeLinkMenu()
+  if (!anchor) return
+  const host = anchor.closest('[contenteditable="true"]') as HTMLElement | null
+  const parent = anchor.parentNode
+  if (parent) {
+    parent.replaceChild(document.createTextNode(anchor.textContent ?? ''), anchor)
+  }
+  host?.dispatchEvent(new Event('input', { bubbles: true }))
+}
+
+// --- Internal-link hover tooltip --------------------------------------------
+const tooltip = ref<{ path: string[]; rect: DOMRect } | null>(null)
+
+function onRefHover(payload: { pageId: string; rect: DOMRect } | null) {
+  tooltip.value = payload
+    ? { path: store.pagePath(payload.pageId), rect: payload.rect }
+    : null
 }
 
 onBeforeUnmount(() => {
@@ -199,6 +352,9 @@ function onDragUp() {
           @blur="onSavedBlur(box)"
           @drag-start="onDragHandleDown(box, $event)"
           @request-format="openFormatMenu"
+          @navigate="emit('navigate', $event)"
+          @ref-hover="onRefHover"
+          @request-link-menu="onRequestLinkMenu"
         />
 
         <!-- Local drafts (not yet saved) -->
@@ -213,6 +369,9 @@ function onDragUp() {
           @update:text="onDraftText(draft, $event)"
           @blur="onDraftBlur(draft)"
           @request-format="openFormatMenu"
+          @navigate="emit('navigate', $event)"
+          @ref-hover="onRefHover"
+          @request-link-menu="onRequestLinkMenu"
         />
       </div>
     </template>
@@ -230,7 +389,33 @@ function onDragUp() {
       :x="formatMenu.x"
       :y="formatMenu.y"
       @close="closeFormatMenu"
+      @request-link="onRequestLink"
     />
+
+    <!-- Shared link dialog: external URL or internal page -->
+    <ReferenceModal
+      :open="linkDialogOpen"
+      :initial-text="linkDialogText"
+      :initial-kind="linkInitKind"
+      :initial-url="linkInitUrl"
+      :initial-target-page-id="linkInitPageId"
+      :mode="linkDialogMode"
+      :notebook-trees="notebookTrees"
+      @confirm="onLinkConfirm"
+      @cancel="closeLinkDialog"
+    />
+
+    <!-- Right-click menu on an existing link: edit / remove -->
+    <LinkContextMenu
+      v-if="linkMenu"
+      :x="linkMenu.x"
+      :y="linkMenu.y"
+      :items="linkMenuItems"
+      @close="closeLinkMenu"
+    />
+
+    <!-- Breadcrumb tooltip while hovering an internal page link -->
+    <RefTooltip :path="tooltip?.path ?? []" :rect="tooltip?.rect ?? null" />
   </main>
 </template>
 

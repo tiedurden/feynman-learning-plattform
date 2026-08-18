@@ -85,6 +85,89 @@ describe('TextBoxItem', () => {
     })
   })
 
+  describe('link interaction', () => {
+    afterEach(() => vi.restoreAllMocks())
+
+    const pageLink = {
+      ...baseProps,
+      text: 'See <a class="page-link" data-page-id="pg-42">Napoleon</a>'
+    }
+    const webLink = { ...baseProps, text: '<a href="https://example.com">Example</a>' }
+
+    it('navigates on a plain click of an internal page link', async () => {
+      const wrapper = mount(TextBoxItem, { props: pageLink })
+      await wrapper.get('a.page-link').trigger('click')
+
+      expect(wrapper.emitted('navigate')).toEqual([['pg-42']])
+    })
+
+    it('dismisses the hover tooltip when a link is clicked', async () => {
+      const wrapper = mount(TextBoxItem, { props: pageLink })
+      await wrapper.get('a.page-link').trigger('click')
+
+      // The last ref-hover emit clears the tooltip (null payload).
+      expect(wrapper.emitted('ref-hover')!.at(-1)).toEqual([null])
+    })
+
+    it('emits ref-hover with the page id while hovering a page link', async () => {
+      const wrapper = mount(TextBoxItem, { props: pageLink })
+      await wrapper.get('a.page-link').trigger('pointerover')
+
+      const payload = wrapper.emitted('ref-hover')!.at(-1)![0] as { pageId: string }
+      expect(payload.pageId).toBe('pg-42')
+    })
+
+    it('clears ref-hover when the pointer leaves a page link', async () => {
+      const wrapper = mount(TextBoxItem, { props: pageLink })
+      await wrapper.get('a.page-link').trigger('pointerout')
+
+      expect(wrapper.emitted('ref-hover')!.at(-1)).toEqual([null])
+    })
+
+    it('does not navigate on a plain click of an external link', async () => {
+      const wrapper = mount(TextBoxItem, { props: webLink })
+      await wrapper.get('a').trigger('click')
+
+      expect(wrapper.emitted('navigate')).toBeUndefined()
+    })
+
+    it('opens external links in a new tab on Ctrl/Cmd-click', async () => {
+      const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+      const wrapper = mount(TextBoxItem, { props: webLink })
+      await wrapper.get('a').trigger('click', { ctrlKey: true })
+
+      expect(open).toHaveBeenCalledWith(
+        'https://example.com',
+        '_blank',
+        'noopener,noreferrer'
+      )
+    })
+
+    it('requests the link menu (not the format menu) on right-click of a link', async () => {
+      const wrapper = mount(TextBoxItem, { props: pageLink })
+      await wrapper.get('a.page-link').trigger('contextmenu', { clientX: 5, clientY: 6 })
+
+      const payload = wrapper.emitted('request-link-menu')!.at(-1)![0] as {
+        x: number
+        y: number
+        anchor: HTMLAnchorElement
+      }
+      expect(payload.x).toBe(5)
+      expect(payload.y).toBe(6)
+      expect(payload.anchor.getAttribute('data-page-id')).toBe('pg-42')
+      // Does not also open the generic format menu.
+      expect(wrapper.emitted('request-format')).toBeUndefined()
+    })
+
+    it('falls back to the format menu on right-click outside a link', async () => {
+      const wrapper = mount(TextBoxItem, { props: baseProps })
+      await wrapper.get('.text-box').trigger('contextmenu')
+
+      expect(wrapper.emitted('request-format')).toHaveLength(1)
+      expect(wrapper.emitted('request-link-menu')).toBeUndefined()
+    })
+  })
+
   describe('checkboxes', () => {
     it('mirrors a toggled checkbox onto the checked attribute and re-emits', async () => {
       const wrapper = mount(TextBoxItem, {
