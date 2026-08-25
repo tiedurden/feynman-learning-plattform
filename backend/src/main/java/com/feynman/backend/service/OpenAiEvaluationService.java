@@ -107,7 +107,7 @@ public class OpenAiEvaluationService {
                     : "Overall this notebook averages " + avg + "% understanding across "
                         + scores.size() + " page(s). Open individual pages to see targeted feedback "
                         + "on what to explain more simply or in more depth.";
-            notebookScores.put(notebook.id(), new ScoreDto(avg, notes, notebookFeedback));
+            notebookScores.put(notebook.id(), new ScoreDto(avg, notes, notebookFeedback, List.of()));
         }
 
         return new EvaluationResponse(pageScores, notebookScores);
@@ -161,7 +161,8 @@ public class OpenAiEvaluationService {
     private ScoreDto llmScore(PageDto page) {
         String text = page.combinedText();
         if (text.isBlank()) {
-            return new ScoreDto(0, "Page is empty.", "There are no notes on this page yet to give feedback on.");
+            return new ScoreDto(0, "Page is empty.",
+                    "There are no notes on this page yet to give feedback on.", List.of());
         }
 
         String systemPrompt = """
@@ -174,7 +175,12 @@ public class OpenAiEvaluationService {
                 Respond ONLY with strict JSON of the form:
                 {"score": <integer 0-100>, "understandingNotes": "<one short sentence>", \
                 "feedback": "<2-4 sentences of specific, encouraging, actionable feedback: \
-                what is explained well and what to clarify or expand to understand it better>"}""";
+                what is explained well and what to clarify or expand to understand it better>", \
+                "todos": ["<short imperative action the learner should do next, max ~12 words>", \
+                "<another action>"]}
+                Provide 2-5 todos. Each todo must be a concrete, self-contained action \
+                (e.g. "Add a worked example for Bayes' theorem"). Return an empty array if \
+                the notes are already excellent.""";
 
         String userPrompt = "Title: " + safe(page.title()) + "\n\nNotes:\n" + text;
 
@@ -207,7 +213,14 @@ public class OpenAiEvaluationService {
             int score = clamp(parsed.path("score").asInt(0));
             String notes = parsed.path("understandingNotes").asText("");
             String feedback = parsed.path("feedback").asText("");
-            return new ScoreDto(score, notes, feedback);
+            List<String> todos = new ArrayList<>();
+            for (JsonNode item : parsed.path("todos")) {
+                String todo = item.asText("").trim();
+                if (!todo.isBlank()) {
+                    todos.add(todo);
+                }
+            }
+            return new ScoreDto(score, notes, feedback, todos);
         } catch (RestClientResponseException e) {
             // OpenAI returned an HTTP error — translate common cases into clear,
             // actionable messages instead of a generic failure.
@@ -255,7 +268,8 @@ public class OpenAiEvaluationService {
     ScoreDto mockScore(PageDto page) {
         String text = page.combinedText();
         if (text.isBlank()) {
-            return new ScoreDto(0, "Page is empty.", "There are no notes on this page yet to give feedback on.");
+            return new ScoreDto(0, "Page is empty.",
+                    "There are no notes on this page yet to give feedback on.", List.of());
         }
 
         String normalized = text.toLowerCase(Locale.ROOT);
@@ -291,7 +305,30 @@ public class OpenAiEvaluationService {
         return new ScoreDto(score,
                 "Heuristic score from " + words
                         + " word(s), with explanation evidence and uncertainty markers considered (offline mock).",
-                mockFeedback(score, words, evidence, penalty + severePenalty));
+                mockFeedback(score, words, evidence, penalty + severePenalty),
+                mockTodos(words, evidence, penalty + severePenalty));
+    }
+
+    /**
+     * Deterministic offline to-do items that mirror what the heuristic flagged,
+     * so mock mode can populate tick-box to-dos without an API call.
+     */
+    private static List<String> mockTodos(int words, int evidence, int uncertaintyPenalty) {
+        List<String> todos = new ArrayList<>();
+        if (evidence == 0) {
+            todos.add("Explain WHY the key idea is true (use \"because\"/\"therefore\").");
+            todos.add("Add a concrete worked example.");
+        }
+        if (uncertaintyPenalty > 0) {
+            todos.add("Rewrite uncertain phrases as confident explanations.");
+        }
+        if (words < 40) {
+            todos.add("Expand the notes with more detail and coverage.");
+        }
+        if (todos.isEmpty()) {
+            todos.add("Teach the topic aloud from memory to confirm understanding.");
+        }
+        return todos;
     }
 
     /**

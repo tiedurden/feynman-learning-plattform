@@ -71,6 +71,12 @@ const notesCache: Record<string, string> = {}
 const feedbackCache: Record<string, string> = {}
 
 /**
+ * In-memory cache of the LLM's short, actionable to-do items per id, which the
+ * UI can turn into tick boxes on the page.
+ */
+const todosCache: Record<string, string[]> = {}
+
+/**
  * Fallback percent for ids the backend has not evaluated yet (e.g. a newly
  * created notebook/page, or before the first evaluation completes).
  */
@@ -102,7 +108,10 @@ export function setProgresses(scores: Record<string, number>): void {
  * directly.
  */
 export function setLiveScores(
-  scores: Record<string, { score: number; understandingNotes?: string; feedback?: string }>
+  scores: Record<
+    string,
+    { score: number; understandingNotes?: string; feedback?: string; todos?: string[] }
+  >
 ): void {
   for (const [id, entry] of Object.entries(scores)) {
     if (entry && typeof entry.score === 'number') {
@@ -112,6 +121,9 @@ export function setLiveScores(
       }
       if (entry.feedback) {
         feedbackCache[id] = entry.feedback
+      }
+      if (Array.isArray(entry.todos)) {
+        todosCache[id] = entry.todos
       }
     }
   }
@@ -123,6 +135,7 @@ export function clearProgress(): void {
   for (const key of Object.keys(scoreCache)) delete scoreCache[key]
   for (const key of Object.keys(notesCache)) delete notesCache[key]
   for (const key of Object.keys(feedbackCache)) delete feedbackCache[key]
+  for (const key of Object.keys(todosCache)) delete todosCache[key]
   scoreVersion.value++
 }
 
@@ -150,5 +163,13 @@ export function getUnderstandingNotes(id: string): string {
  */
 export function getFeedback(id: string): string {
   return feedbackCache[id] ?? ''
+}
+
+/**
+ * Return the LLM's actionable to-do items for an id, or an empty array if the
+ * id has not been evaluated (or the backend returned no to-dos).
+ */
+export function getTodos(id: string): string[] {
+  return todosCache[id] ?? []
 }
 

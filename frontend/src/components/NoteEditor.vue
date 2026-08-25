@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { Page, TextBox } from '@/types'
 import { useNotesStore } from '@/stores/notesStore'
-import { getFeedback, scoreVersion } from '@/utils/progress'
+import { getFeedback, getTodos, scoreVersion } from '@/utils/progress'
 import TextBoxItem from './TextBoxItem.vue'
 import FormatMenu from './FormatMenu.vue'
 import ReferenceModal from './ReferenceModal.vue'
@@ -40,6 +40,53 @@ const feedback = computed(() => {
   void scoreVersion.value
   return props.page ? getFeedback(props.page.id) : ''
 })
+
+/** The model's actionable to-do items for the current page. */
+const todos = computed<string[]>(() => {
+  void scoreVersion.value
+  return props.page ? getTodos(props.page.id) : []
+})
+
+/** Escape user/LLM text before embedding it in tick-box HTML. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+/**
+ * Turn the feedback's to-do items into a new text box of interactive tick
+ * boxes, placed at the top of the page (existing boxes shift down to make room).
+ */
+function createTodos() {
+  if (!props.page || todos.value.length === 0) return
+
+  // Mirror FormatMenu's tick-box markup so it renders and persists identically.
+  const items = todos.value
+    .map(
+      (t) =>
+        `<div><span class="tick" contenteditable="false">` +
+        `<input type="checkbox"></span>&nbsp;${escapeHtml(t)}</div>`
+    )
+    .join('')
+  const html = `<div><strong>To-dos from feedback</strong></div>${items}`
+
+  // Estimated height of the new box (header + one line per todo + padding),
+  // used to push existing boxes down so the to-dos sit cleanly at the top.
+  const TOP = 24
+  const LINE_HEIGHT = 26
+  const boxHeight = (todos.value.length + 1) * LINE_HEIGHT + 24
+  const shift = TOP + boxHeight + 16
+
+  // Shift existing boxes down first so the new to-dos box does not overlap them.
+  for (const box of props.page.boxes ?? []) {
+    store.updateTextBox(props.page.id, box.id, { y: box.y + shift })
+  }
+
+  store.addTextBox(props.page.id, { x: 24, y: TOP, text: html })
+}
 
 /** Whether the feedback callout should currently be visible. */
 const showFeedback = computed({
@@ -359,6 +406,15 @@ function onDragUp() {
         <div class="feedback-header">
           <span class="feedback-icon" aria-hidden="true">💡</span>
           <span class="feedback-title">Feynman feedback</span>
+          <button
+            v-if="todos.length"
+            type="button"
+            class="todo-btn"
+            :title="`Add ${todos.length} to-do item(s) as tick boxes on this page`"
+            @click="createTodos"
+          >
+            ☑ Create {{ todos.length }} to-do{{ todos.length === 1 ? '' : 's' }}
+          </button>
         </div>
         <p class="feedback-body">{{ feedback }}</p>
       </aside>
@@ -509,6 +565,21 @@ function onDragUp() {
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--accent, #7719aa);
+}
+.todo-btn {
+  margin-left: auto;
+  border: 1px solid var(--accent, #7719aa);
+  background: #fff;
+  color: var(--accent, #7719aa);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.todo-btn:hover {
+  background: color-mix(in srgb, var(--accent, #7719aa) 12%, #fff);
 }
 .feedback-body {
   margin: 0;

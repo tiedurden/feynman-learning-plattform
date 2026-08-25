@@ -14,6 +14,8 @@ export interface Score {
   understandingNotes: string
   /** Longer, actionable Feynman-style feedback paragraph. May be empty. */
   feedback?: string
+  /** Short, actionable to-do items the UI can turn into tick boxes. */
+  todos?: string[]
 }
 
 /** Response shape of {@code POST /api/evaluate}. */
