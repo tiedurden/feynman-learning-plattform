@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { Page, TextBox } from '@/types'
 import { useNotesStore } from '@/stores/notesStore'
+import { getFeedback, scoreVersion } from '@/utils/progress'
 import TextBoxItem from './TextBoxItem.vue'
 import FormatMenu from './FormatMenu.vue'
 import ReferenceModal from './ReferenceModal.vue'
@@ -14,6 +15,7 @@ interface LinkMenuItem {
   danger?: boolean
   action: () => void
 }
+import ToggleSwitch from './ToggleSwitch.vue'
 
 const props = defineProps<{
   page?: Page
@@ -30,6 +32,19 @@ const store = useNotesStore()
 const title = computed({
   get: () => props.page?.title ?? '',
   set: (v: string) => emit('update', { title: v })
+})
+
+/** The model's feedback for the current page (empty until evaluated). */
+const feedback = computed(() => {
+  // Depend on the reactive version so the callout refreshes after evaluation.
+  void scoreVersion.value
+  return props.page ? getFeedback(props.page.id) : ''
+})
+
+/** Whether the feedback callout should currently be visible. */
+const showFeedback = computed({
+  get: () => store.showFeedback,
+  set: (v: boolean) => store.setShowFeedback(v)
 })
 
 /** Draft boxes exist only locally until they contain text. */
@@ -329,7 +344,24 @@ function onDragUp() {
         placeholder="Untitled Page"
         spellcheck="false"
       />
-      <div class="meta">Click anywhere below to add a text box</div>
+      <div class="meta">
+        <span>Click anywhere below to add a text box</span>
+        <ToggleSwitch
+          v-if="feedback"
+          v-model="showFeedback"
+          label="Show feedback"
+          tone="light"
+        />
+      </div>
+
+      <!-- Model-generated feedback callout (distinct from note content). -->
+      <aside v-if="feedback && showFeedback" class="feedback-callout" role="note">
+        <div class="feedback-header">
+          <span class="feedback-icon" aria-hidden="true">💡</span>
+          <span class="feedback-title">Feynman feedback</span>
+        </div>
+        <p class="feedback-body">{{ feedback }}</p>
+      </aside>
 
       <div
         ref="canvasRef"
@@ -442,11 +474,48 @@ function onDragUp() {
 }
 
 .meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   color: var(--text-muted);
   font-size: 12px;
   border-bottom: 1px solid var(--sidebar-border);
   padding-bottom: 12px;
   margin-bottom: 16px;
+}
+
+/* Model feedback callout — visually distinct from the note canvas. */
+.feedback-callout {
+  border: 1px solid var(--accent, #7719aa);
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent, #7719aa) 8%, #fff);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+.feedback-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.feedback-icon {
+  font-size: 14px;
+}
+.feedback-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--accent, #7719aa);
+}
+.feedback-body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-line;
 }
 
 /* The free-positioning surface. */

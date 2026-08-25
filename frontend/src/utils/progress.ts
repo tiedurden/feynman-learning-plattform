@@ -16,6 +16,8 @@
  * later without touching the components.
  */
 
+import { ref } from 'vue'
+
 export interface ProgressThresholds {
   /** Below this percent → "danger" (red). */
   danger: number
@@ -30,6 +32,13 @@ export const DEFAULT_THRESHOLDS: ProgressThresholds = {
 }
 
 export type ProgressLevel = 'danger' | 'warn' | 'good'
+
+/**
+ * Reactive counter bumped whenever cached scores/feedback change. Components can
+ * read it inside a `computed` to establish a reactive dependency on the
+ * otherwise plain (non-reactive) caches, so they refresh after an evaluation.
+ */
+export const scoreVersion = ref(0)
 
 /**
  * Map a percent value to a color level using the given thresholds.
@@ -54,6 +63,12 @@ const scoreCache: Record<string, number> = {}
  * tooltip on the progress badge so users can see WHY a topic scored as it did.
  */
 const notesCache: Record<string, string> = {}
+
+/**
+ * In-memory cache of the LLM's longer, actionable "feedback" per id, shown as a
+ * distinguishable callout inside the evaluated notebook.
+ */
+const feedbackCache: Record<string, string> = {}
 
 /**
  * Fallback percent for ids the backend has not evaluated yet (e.g. a newly
@@ -87,7 +102,7 @@ export function setProgresses(scores: Record<string, number>): void {
  * directly.
  */
 export function setLiveScores(
-  scores: Record<string, { score: number; understandingNotes?: string }>
+  scores: Record<string, { score: number; understandingNotes?: string; feedback?: string }>
 ): void {
   for (const [id, entry] of Object.entries(scores)) {
     if (entry && typeof entry.score === 'number') {
@@ -95,14 +110,20 @@ export function setLiveScores(
       if (entry.understandingNotes) {
         notesCache[id] = entry.understandingNotes
       }
+      if (entry.feedback) {
+        feedbackCache[id] = entry.feedback
+      }
     }
   }
+  scoreVersion.value++
 }
 
 /** Clear all cached scores (e.g. on reset-to-seed). */
 export function clearProgress(): void {
   for (const key of Object.keys(scoreCache)) delete scoreCache[key]
   for (const key of Object.keys(notesCache)) delete notesCache[key]
+  for (const key of Object.keys(feedbackCache)) delete feedbackCache[key]
+  scoreVersion.value++
 }
 
 /**
@@ -121,5 +142,13 @@ export function getProgress(id: string): number {
  */
 export function getUnderstandingNotes(id: string): string {
   return notesCache[id] ?? ''
+}
+
+/**
+ * Return the LLM's longer feedback paragraph for an id, or an empty string if
+ * the id has not been evaluated (or the backend returned no feedback).
+ */
+export function getFeedback(id: string): string {
+  return feedbackCache[id] ?? ''
 }
 

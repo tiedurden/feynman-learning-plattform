@@ -12,6 +12,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 export interface Score {
   score: number
   understandingNotes: string
+  /** Longer, actionable Feynman-style feedback paragraph. May be empty. */
+  feedback?: string
 }
 
 /** Response shape of {@code POST /api/evaluate}. */
@@ -46,3 +48,5 @@ export async function evaluateNotes(
 
   return (await res.json()) as EvaluationResult
 }
+
+

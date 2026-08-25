@@ -39,6 +39,21 @@ function loadShowProgress(): boolean {
   return false
 }
 
+/** Load the persisted "show feedback" preference (defaults to on). */
+function loadShowFeedback(): boolean {
+  try {
+    const raw = localStorage.getItem(UI_STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as { showFeedback?: boolean }
+      // Default to true so freshly evaluated feedback is visible out of the box.
+      return parsed.showFeedback !== false
+    }
+  } catch {
+    /* ignore malformed storage */
+  }
+  return true
+}
+
 function loadState(): PersistShape {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -67,12 +82,19 @@ interface State {
   pages: Page[]
   /** Global toggle: show completion progress badges across all sidebars. */
   showProgress: boolean
+  /** Page toggle: show the model's feedback callout inside the editor. */
+  showFeedback: boolean
 }
 
 export const useNotesStore = defineStore('notes', {
   state: (): State => {
     const { notebooks, pages } = loadState()
-    return { notebooks, pages, showProgress: loadShowProgress() }
+    return {
+      notebooks,
+      pages,
+      showProgress: loadShowProgress(),
+      showFeedback: loadShowFeedback()
+    }
   },
 
   getters: {
@@ -169,17 +191,31 @@ export const useNotesStore = defineStore('notes', {
     },
 
     // --- UI preferences ------------------------------------------------------
-    /** Toggle (or explicitly set) the global progress display. */
-    setShowProgress(value?: boolean) {
-      this.showProgress = value ?? !this.showProgress
+    /** Persist all lightweight UI preferences together (best-effort). */
+    persistUiPrefs() {
       try {
         localStorage.setItem(
           UI_STORAGE_KEY,
-          JSON.stringify({ showProgress: this.showProgress })
+          JSON.stringify({
+            showProgress: this.showProgress,
+            showFeedback: this.showFeedback
+          })
         )
       } catch {
         /* storage might be unavailable — non-fatal */
       }
+    },
+
+    /** Toggle (or explicitly set) the global progress display. */
+    setShowProgress(value?: boolean) {
+      this.showProgress = value ?? !this.showProgress
+      this.persistUiPrefs()
+    },
+
+    /** Toggle (or explicitly set) the in-editor feedback callout. */
+    setShowFeedback(value?: boolean) {
+      this.showFeedback = value ?? !this.showFeedback
+      this.persistUiPrefs()
     },
 
     // --- Notebook CRUD -------------------------------------------------------

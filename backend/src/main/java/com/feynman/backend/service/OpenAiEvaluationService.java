@@ -102,7 +102,12 @@ public class OpenAiEvaluationService {
             String notes = scores.isEmpty()
                     ? "No pages to evaluate yet."
                     : "Average understanding across " + scores.size() + " page(s).";
-            notebookScores.put(notebook.id(), new ScoreDto(avg, notes));
+            String notebookFeedback = scores.isEmpty()
+                    ? "Add and evaluate some pages to get feedback for this notebook."
+                    : "Overall this notebook averages " + avg + "% understanding across "
+                        + scores.size() + " page(s). Open individual pages to see targeted feedback "
+                        + "on what to explain more simply or in more depth.";
+            notebookScores.put(notebook.id(), new ScoreDto(avg, notes, notebookFeedback));
         }
 
         return new EvaluationResponse(pageScores, notebookScores);
@@ -156,7 +161,7 @@ public class OpenAiEvaluationService {
     private ScoreDto llmScore(PageDto page) {
         String text = page.combinedText();
         if (text.isBlank()) {
-            return new ScoreDto(0, "Page is empty.");
+            return new ScoreDto(0, "Page is empty.", "There are no notes on this page yet to give feedback on.");
         }
 
         String systemPrompt = """
@@ -167,7 +172,9 @@ public class OpenAiEvaluationService {
                 cause/effect reasoning, and coverage. Penalise: sparse notes, unexplained jargon,
                 copy-paste lists without explanation, and contradictions.
                 Respond ONLY with strict JSON of the form:
-                {"score": <integer 0-100>, "understandingNotes": "<one short sentence>"}""";
+                {"score": <integer 0-100>, "understandingNotes": "<one short sentence>", \
+                "feedback": "<2-4 sentences of specific, encouraging, actionable feedback: \
+                what is explained well and what to clarify or expand to understand it better>"}""";
 
         String userPrompt = "Title: " + safe(page.title()) + "\n\nNotes:\n" + text;
 
@@ -199,7 +206,8 @@ public class OpenAiEvaluationService {
 
             int score = clamp(parsed.path("score").asInt(0));
             String notes = parsed.path("understandingNotes").asText("");
-            return new ScoreDto(score, notes);
+            String feedback = parsed.path("feedback").asText("");
+            return new ScoreDto(score, notes, feedback);
         } catch (RestClientResponseException e) {
             // OpenAI returned an HTTP error — translate common cases into clear,
             // actionable messages instead of a generic failure.
@@ -247,7 +255,7 @@ public class OpenAiEvaluationService {
     ScoreDto mockScore(PageDto page) {
         String text = page.combinedText();
         if (text.isBlank()) {
-            return new ScoreDto(0, "Page is empty.");
+            return new ScoreDto(0, "Page is empty.", "There are no notes on this page yet to give feedback on.");
         }
 
         String normalized = text.toLowerCase(Locale.ROOT);
@@ -282,7 +290,35 @@ public class OpenAiEvaluationService {
         int score = clamp(effort + evidence - penalty - severePenalty);
         return new ScoreDto(score,
                 "Heuristic score from " + words
-                        + " word(s), with explanation evidence and uncertainty markers considered (offline mock).");
+                        + " word(s), with explanation evidence and uncertainty markers considered (offline mock).",
+                mockFeedback(score, words, evidence, penalty + severePenalty));
+    }
+
+    /**
+     * Deterministic offline feedback that mirrors what the heuristic rewarded or
+     * penalised, so mock mode still shows useful, distinguishable guidance.
+     */
+    private static String mockFeedback(int score, int words, int evidence, int uncertaintyPenalty) {
+        StringBuilder sb = new StringBuilder();
+        if (score >= 75) {
+            sb.append("Strong understanding: your notes explain the topic clearly and in your own words. ");
+        } else if (score >= 33) {
+            sb.append("Developing understanding: the core idea is there but parts could be explained more simply. ");
+        } else {
+            sb.append("Early understanding: the notes are sparse or uncertain, so keep building them up. ");
+        }
+        if (evidence > 0) {
+            sb.append("Good use of reasoning and examples (\"because\", \"for example\", etc.). ");
+        } else {
+            sb.append("Try adding cause/effect reasoning (\"because\", \"therefore\") and a worked example. ");
+        }
+        if (uncertaintyPenalty > 0) {
+            sb.append("Some phrases signal uncertainty — revisit those and rewrite them as confident explanations. ");
+        }
+        if (words < 40) {
+            sb.append("Expanding the notes with more detail would demonstrate deeper understanding.");
+        }
+        return sb.toString().trim() + " (offline mock feedback)";
     }
 
     private static int countOccurrences(String text, String... terms) {

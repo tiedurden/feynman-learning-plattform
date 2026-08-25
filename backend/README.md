@@ -39,14 +39,24 @@ Response body:
 ```json
 {
   "pageScores": {
-    "pg-feynman": { "score": 88, "understandingNotes": "Clear, structured steps." }
+    "pg-feynman": {
+      "score": 88,
+      "understandingNotes": "Clear, structured steps.",
+      "feedback": "You explain each step of the technique clearly and in your own words. To go deeper, add a worked example of teaching a concept and note where you got stuck, since spotting gaps is the core of the method."
+    }
   },
   "notebookScores": {
-    "nb-study": { "score": 88, "understandingNotes": "Average understanding across 1 page(s)." }
+    "nb-study": {
+      "score": 88,
+      "understandingNotes": "Average understanding across 1 page(s).",
+      "feedback": "Overall this notebook averages 88% understanding across 1 page(s). Open individual pages to see targeted feedback."
+    }
   }
 }
 ```
 
+Each score carries a short `understandingNotes` (one-line badge tooltip) and a
+longer, actionable `feedback` paragraph shown as a callout in the notebook UI.
 Notebook scores are the average of their pages' scores.
 
 ## Running
