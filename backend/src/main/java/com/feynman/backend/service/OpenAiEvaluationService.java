@@ -109,6 +109,47 @@ public class OpenAiEvaluationService {
     }
 
     // ---------------------------------------------------------------------------
+    // Model discovery
+    // ---------------------------------------------------------------------------
+
+    /**
+     * List the model IDs the configured API key is allowed to use by calling
+     * {@code GET /v1/models}. Useful to discover which models can replace the
+     * default {@code openai.model}.
+     *
+     * @return sorted, distinct list of model IDs returned by the provider.
+     */
+    public List<String> listModels() {
+        try {
+            String responseJson = openAiRestClient.get()
+                    .uri("/models")
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .body(String.class);
+
+            JsonNode data = objectMapper.readTree(responseJson).path("data");
+            List<String> models = new ArrayList<>();
+            for (JsonNode node : data) {
+                String id = node.path("id").asText("");
+                if (!id.isBlank()) {
+                    models.add(id);
+                }
+            }
+            models.sort(String::compareTo);
+            return models;
+        } catch (RestClientResponseException e) {
+            String detail = openAiErrorDetail(
+                    e.getStatusCode().value(), e.getResponseBodyAsString(), properties.model());
+            log.error("Listing models failed — {} Body: {}", detail, e.getResponseBodyAsString());
+            throw new EvaluationException(detail, e);
+        } catch (Exception e) {
+            log.error("Listing models failed. Cause: {}", e.getMessage());
+            throw new EvaluationException(
+                    "Could not list OpenAI models. Check OPENAI_API_KEY, base URL, and network configuration.", e);
+        }
+    }
+
+    // ---------------------------------------------------------------------------
     // OpenAI-backed scoring
     // ---------------------------------------------------------------------------
 
@@ -131,15 +172,19 @@ public class OpenAiEvaluationService {
         String userPrompt = "Title: " + safe(page.title()) + "\n\nNotes:\n" + text;
 
         try {
-            Map<String, Object> body = Map.of(
-                    "model", properties.model(),
-                    "temperature", 0,
-                    "response_format", Map.of("type", "json_object"),
-                    "messages", List.of(
-                            Map.of("role", "system", "content", systemPrompt),
-                            Map.of("role", "user", "content", userPrompt)
-                    )
-            );
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("model", properties.model());
+            // Newer models (gpt-5.x family and the o-series reasoning models) only
+            // accept the default temperature and reject an explicit value with a
+            // 400. Send temperature=0 for determinism only where it's supported.
+            if (supportsCustomTemperature(properties.model())) {
+                body.put("temperature", 0);
+            }
+            body.put("response_format", Map.of("type", "json_object"));
+            body.put("messages", List.of(
+                    Map.of("role", "system", "content", systemPrompt),
+                    Map.of("role", "user", "content", userPrompt)
+            ));
 
             String responseJson = openAiRestClient.post()
                     .uri("/chat/completions")
@@ -254,6 +299,23 @@ public class OpenAiEvaluationService {
 
     private static int clamp(int v) {
         return Math.max(0, Math.min(100, v));
+    }
+
+    /**
+     * Whether a model accepts an explicit {@code temperature} value. The
+     * gpt-5.x family and the o-series reasoning models (o1/o3/o4) only support
+     * the default temperature and return HTTP 400 for any explicit value.
+     */
+    static boolean supportsCustomTemperature(String model) {
+        if (model == null) {
+            return true;
+        }
+        String m = model.toLowerCase(Locale.ROOT);
+        boolean fixedTemperature = m.startsWith("gpt-5")
+                || m.startsWith("o1")
+                || m.startsWith("o3")
+                || m.startsWith("o4");
+        return !fixedTemperature;
     }
 
     private static String safe(String s) {

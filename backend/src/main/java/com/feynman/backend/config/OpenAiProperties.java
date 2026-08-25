@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * Strongly-typed binding for the {@code openai.*} configuration block.
  *
  * @param apiKey  OpenAI API key; required when mock scoring is disabled.
- * @param model   Chat model name (e.g. {@code gpt-4o-mini}).
+ * @param model   Chat model name (e.g. {@code gpt-5.5}).
  * @param baseUrl Base URL of the OpenAI-compatible API.
  * @param mock    Force deterministic mock scoring.
  */

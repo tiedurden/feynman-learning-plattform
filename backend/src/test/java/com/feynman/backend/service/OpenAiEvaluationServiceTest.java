@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -154,6 +155,23 @@ class OpenAiEvaluationServiceTest {
                 .toLowerCase().contains("rate limit"), "429 non-quota should mention rate limit");
         assertTrue(OpenAiEvaluationService.openAiErrorDetail(500, "", "gpt-4o-mini")
                 .contains("500"), "Unknown status should include the code");
+    }
+
+    // --- Temperature capability -------------------------------------------------
+
+    @Test
+    void temperatureOnlySentForSupportedModels() {
+        // gpt-5.x and o-series reject an explicit temperature (HTTP 400).
+        assertFalse(OpenAiEvaluationService.supportsCustomTemperature("gpt-5.5"));
+        assertFalse(OpenAiEvaluationService.supportsCustomTemperature("gpt-5.5-pro"));
+        assertFalse(OpenAiEvaluationService.supportsCustomTemperature("o1"));
+        assertFalse(OpenAiEvaluationService.supportsCustomTemperature("o3-mini"));
+        assertFalse(OpenAiEvaluationService.supportsCustomTemperature("o4-mini"));
+        // Older chat models still accept temperature=0 for determinism.
+        assertTrue(OpenAiEvaluationService.supportsCustomTemperature("gpt-4o"));
+        assertTrue(OpenAiEvaluationService.supportsCustomTemperature("gpt-4o-mini"));
+        assertTrue(OpenAiEvaluationService.supportsCustomTemperature("gpt-4.1"));
+        assertTrue(OpenAiEvaluationService.supportsCustomTemperature(null));
     }
 }
 

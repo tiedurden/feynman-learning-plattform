@@ -69,7 +69,7 @@ set OPENAI_API_KEY=sk-...
 mvn spring-boot:run
 ```
 
-Optional overrides: `OPENAI_MODEL` (default `gpt-4o-mini`), `OPENAI_BASE_URL`.
+Optional overrides: `OPENAI_MODEL` (default `gpt-5.5`), `OPENAI_BASE_URL`.
 
 ### Without a key (offline mock)
 
@@ -84,3 +84,4 @@ mvn test
 ```
 
 The service's mock scoring path is covered without needing an API key.
+
