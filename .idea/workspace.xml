@@ -4,10 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f8ee5bea-822c-4815-aa94-aa6a0f61d913" name="Changes" comment="flp6 add internal reference links">
-      <change afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/__tests__/ReferenceModal.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/__tests__/ReferenceModal.spec.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/__tests__/TextBoxItem.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/__tests__/TextBoxItem.spec.ts" afterDir="false" />
+    <list default="true" id="f8ee5bea-822c-4815-aa94-aa6a0f61d913" name="Changes" comment="add unit tests">
+      <change beforePath="$PROJECT_DIR$/.idea/copilotDiffState.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/copilotDiffState.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -243,6 +242,7 @@
       <workItem from="1786519622611" duration="2588000" />
       <workItem from="1786522850232" duration="678000" />
       <workItem from="1786523546989" duration="11382000" />
+      <workItem from="1787038769906" duration="939000" />
     </task>
     <task id="LOCAL-00001" summary="on page click to create text box">
       <option name="closed" value="true" />
@@ -436,7 +436,15 @@
       <option name="project" value="LOCAL" />
       <updated>1787037185787</updated>
     </task>
-    <option name="localTasksCounter" value="25" />
+    <task id="LOCAL-00025" summary="add unit tests">
+      <option name="closed" value="true" />
+      <created>1787037682169</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1787037682169</updated>
+    </task>
+    <option name="localTasksCounter" value="26" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -477,7 +485,6 @@
     <MESSAGE value="add ci test pipeline step" />
     <MESSAGE value="FLP14 - edit and delete notbooks" />
     <MESSAGE value="add custom dialog" />
-    <MESSAGE value="add unit tests" />
     <MESSAGE value="FLP3 added switch toggle and progress badges (#17)&#10;&#10;* FLP3 added switch toggle and progress badges&#10;&#10;* fix build&#10;&#10;---------&#10;&#10;Co-authored-by: domenic.pfau &lt;domenic.pfau@kuehne-nagel.com&gt;" />
     <MESSAGE value="fix build" />
     <MESSAGE value="added backend and score evaluation api" />
@@ -491,7 +498,8 @@
     <MESSAGE value="fix tests" />
     <MESSAGE value="fix pipeline" />
     <MESSAGE value="flp6 add internal reference links" />
-    <option name="LAST_COMMIT_MESSAGE" value="flp6 add internal reference links" />
+    <MESSAGE value="add unit tests" />
+    <option name="LAST_COMMIT_MESSAGE" value="add unit tests" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>
