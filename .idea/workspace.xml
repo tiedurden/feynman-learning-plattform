@@ -4,10 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f8ee5bea-822c-4815-aa94-aa6a0f61d913" name="Changes" comment="add unit tests">
-      <change beforePath="$PROJECT_DIR$/.idea/copilotDiffState.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/copilotDiffState.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-    </list>
+    <list default="true" id="f8ee5bea-822c-4815-aa94-aa6a0f61d913" name="Changes" comment="add unit tests" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -40,9 +37,6 @@
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
-  </component>
-  <component name="ProblemsViewState">
-    <option name="selectedTabId" value="DEPENDENCY_CHECKER_PROBLEMS_TAB" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1
@@ -242,7 +236,6 @@
       <workItem from="1786519622611" duration="2588000" />
       <workItem from="1786522850232" duration="678000" />
       <workItem from="1786523546989" duration="11382000" />
-      <workItem from="1787038769906" duration="939000" />
     </task>
     <task id="LOCAL-00001" summary="on page click to create text box">
       <option name="closed" value="true" />
@@ -420,31 +413,47 @@
       <option name="project" value="LOCAL" />
       <updated>1786961736655</updated>
     </task>
-    <task id="LOCAL-00023" summary="fix pipeline">
+    <task id="LOCAL-00023" summary="use better model">
       <option name="closed" value="true" />
-      <created>1787035421370</created>
+      <created>1787643974445</created>
       <option name="number" value="00023" />
       <option name="presentableId" value="LOCAL-00023" />
       <option name="project" value="LOCAL" />
-      <updated>1787035421370</updated>
+      <updated>1787643974445</updated>
     </task>
-    <task id="LOCAL-00024" summary="flp6 add internal reference links">
+    <task id="LOCAL-00024" summary="get basic feed back text.">
       <option name="closed" value="true" />
-      <created>1787037185787</created>
+      <created>1787644998825</created>
       <option name="number" value="00024" />
       <option name="presentableId" value="LOCAL-00024" />
       <option name="project" value="LOCAL" />
-      <updated>1787037185787</updated>
+      <updated>1787644998825</updated>
     </task>
-    <task id="LOCAL-00025" summary="add unit tests">
+    <task id="LOCAL-00025" summary="create todos from feedback">
       <option name="closed" value="true" />
-      <created>1787037682169</created>
+      <created>1787645846989</created>
       <option name="number" value="00025" />
       <option name="presentableId" value="LOCAL-00025" />
       <option name="project" value="LOCAL" />
-      <updated>1787037682169</updated>
+      <updated>1787645846989</updated>
     </task>
-    <option name="localTasksCounter" value="26" />
+    <task id="LOCAL-00026" summary="create todos from feedback">
+      <option name="closed" value="true" />
+      <created>1787645871433</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1787645871433</updated>
+    </task>
+    <task id="LOCAL-00027" summary="add unit tests">
+      <option name="closed" value="true" />
+      <created>1787646227188</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1787646227188</updated>
+    </task>
+    <option name="localTasksCounter" value="28" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -475,7 +484,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="FLP2 on page click to create text box" />
-    <MESSAGE value="FLP2 on page click to create text box" />
     <MESSAGE value="when textbox is empty it gets deleted" />
     <MESSAGE value="show full textbox all the time (dont collapse when somewhere else clicked)" />
     <MESSAGE value="refactor textbox functionality to be own component" />
@@ -496,8 +504,9 @@
     <MESSAGE value="FLP2.1 - formatting tools iteration 1" />
     <MESSAGE value="FLP2.1 - formatting tools iteration 1 unit test and small changes" />
     <MESSAGE value="fix tests" />
-    <MESSAGE value="fix pipeline" />
-    <MESSAGE value="flp6 add internal reference links" />
+    <MESSAGE value="use better model" />
+    <MESSAGE value="get basic feed back text." />
+    <MESSAGE value="create todos from feedback" />
     <MESSAGE value="add unit tests" />
     <option name="LAST_COMMIT_MESSAGE" value="add unit tests" />
   </component>
