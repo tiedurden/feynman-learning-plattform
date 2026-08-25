@@ -173,6 +173,53 @@ class OpenAiEvaluationServiceTest {
         assertTrue(OpenAiEvaluationService.supportsCustomTemperature("gpt-4.1"));
         assertTrue(OpenAiEvaluationService.supportsCustomTemperature(null));
     }
+
+    // --- Feedback and to-dos ----------------------------------------------------
+
+    @Test
+    void mockScoreProducesFeedbackAndTodos() {
+        OpenAiEvaluationService service = newMockService();
+        PageDto sparse = new PageDto("pg-x", "nb", null, "Topic", "a short note", List.of(), 0);
+
+        ScoreDto s = service.mockScore(sparse);
+
+        assertFalse(s.feedback().isBlank(), "Mock feedback must not be blank");
+        assertFalse(s.todos().isEmpty(), "Sparse notes should yield actionable to-dos");
+    }
+
+    @Test
+    void emptyPageHasFeedbackButNoTodos() {
+        OpenAiEvaluationService service = newMockService();
+        PageDto empty = new PageDto("pg-empty", "nb", null, "Empty", "   ", List.of(), 0);
+
+        ScoreDto s = service.mockScore(empty);
+
+        assertEquals(0, s.score());
+        assertFalse(s.feedback().isBlank(), "Empty page should still explain there is nothing to grade");
+        assertTrue(s.todos().isEmpty(), "Empty page should have no to-dos");
+    }
+
+    @Test
+    void scoreDtoGuaranteesNonNullTodos() {
+        ScoreDto s = new ScoreDto(50, "notes", "feedback", null);
+        assertTrue(s.todos().isEmpty(), "null todos must normalise to an empty list");
+    }
+
+    @Test
+    void evaluatePopulatesFeedbackAndTodosViaMock() {
+        OpenAiEvaluationService service = newMockService();
+        PageDto page = new PageDto("pg-a", "nb-1", null, "A", "brief", List.of(), 0);
+
+        EvaluationResponse res = service.evaluate(new EvaluateRequest(
+                List.of(new NotebookDto("nb-1", "N", "#000")), List.of(page), null));
+
+        ScoreDto pageScore = res.pageScores().get("pg-a");
+        assertFalse(pageScore.feedback().isBlank());
+        assertFalse(pageScore.todos().isEmpty());
+        // Notebook aggregation carries feedback but no page-level to-dos.
+        assertFalse(res.notebookScores().get("nb-1").feedback().isBlank());
+        assertTrue(res.notebookScores().get("nb-1").todos().isEmpty());
+    }
 }
 
 

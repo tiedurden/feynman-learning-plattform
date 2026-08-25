@@ -5,6 +5,7 @@ import { nextTick } from 'vue'
 import NoteEditor from '@/components/NoteEditor.vue'
 import TextBoxItem from '@/components/TextBoxItem.vue'
 import { useNotesStore } from '@/stores/notesStore'
+import { setLiveScores, clearProgress } from '@/utils/progress'
 import type { Page } from '@/types'
 
 function setup() {
@@ -155,6 +156,80 @@ describe('NoteEditor — text box behaviour', () => {
     const wrapper = mountEditor(undefined)
     expect(wrapper.find('.placeholder').exists()).toBe(true)
     expect(wrapper.find('.canvas').exists()).toBe(false)
+    wrapper.unmount()
+  })
+})
+
+describe('NoteEditor — feedback & to-dos', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    clearProgress()
+  })
+
+  it('renders the feedback callout when feedback exists', () => {
+    const { pinia, page } = setup()
+    setLiveScores({ [page.id]: { score: 50, feedback: 'Nice, explain why it works', todos: [] } })
+    const wrapper = mountEditor(page, pinia)
+
+    expect(wrapper.find('.feedback-callout').exists()).toBe(true)
+    expect(wrapper.find('.feedback-body').text()).toContain('explain why it works')
+    wrapper.unmount()
+  })
+
+  it('does not render a callout when there is no feedback', () => {
+    const { pinia, page } = setup()
+    const wrapper = mountEditor(page, pinia)
+    expect(wrapper.find('.feedback-callout').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('hides the callout when showFeedback is turned off', () => {
+    const { pinia, store, page } = setup()
+    setLiveScores({ [page.id]: { score: 50, feedback: 'Some feedback' } })
+    store.setShowFeedback(false)
+    const wrapper = mountEditor(page, pinia)
+
+    expect(wrapper.find('.feedback-callout').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('shows the Create to-dos button only when todos exist', () => {
+    const { pinia, page } = setup()
+    setLiveScores({ [page.id]: { score: 50, feedback: 'x', todos: ['Add a worked example'] } })
+    const wrapper = mountEditor(page, pinia)
+
+    expect(wrapper.find('.todo-btn').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('creates a tick-box text box at the top of the page from todos', async () => {
+    const { pinia, store, page } = setup()
+    setLiveScores({
+      [page.id]: { score: 50, feedback: 'x', todos: ['Add an example', 'Explain why'] }
+    })
+    const wrapper = mountEditor(page, pinia)
+
+    await wrapper.get('.todo-btn').trigger('click')
+
+    const boxes = store.pageById(page.id)!.boxes
+    expect(boxes).toHaveLength(1)
+    expect(boxes[0].y).toBe(24) // pinned to the top
+    expect(boxes[0].text).toContain('type="checkbox"')
+    expect(boxes[0].text).toContain('Add an example')
+    expect(boxes[0].text).toContain('Explain why')
+    wrapper.unmount()
+  })
+
+  it('shifts existing boxes down when adding to-dos at the top', async () => {
+    const { pinia, store, page } = setup()
+    const existing = store.addTextBox(page.id, { x: 10, y: 10, text: 'Existing note' })!
+    setLiveScores({ [page.id]: { score: 50, feedback: 'x', todos: ['One'] } })
+    const wrapper = mountEditor(page, pinia)
+
+    await wrapper.get('.todo-btn').trigger('click')
+
+    const moved = store.pageById(page.id)!.boxes.find((b) => b.id === existing.id)!
+    expect(moved.y).toBeGreaterThan(10)
     wrapper.unmount()
   })
 })

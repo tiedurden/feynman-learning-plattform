@@ -4,14 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f8ee5bea-822c-4815-aa94-aa6a0f61d913" name="Changes" comment="get basic feed back text.">
-      <change beforePath="$PROJECT_DIR$/.idea/copilotDiffState.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/copilotDiffState.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/dto/ScoreDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/dto/ScoreDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/service/OpenAiEvaluationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/service/OpenAiEvaluationService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/NoteEditor.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/NoteEditor.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/services/evaluationApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/services/evaluationApi.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/utils/progress.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/progress.ts" afterDir="false" />
+    <list default="true" id="f8ee5bea-822c-4815-aa94-aa6a0f61d913" name="Changes" comment="create todos from feedback">
+      <change beforePath="$PROJECT_DIR$/backend/src/test/java/com/feynman/backend/service/OpenAiEvaluationServiceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/test/java/com/feynman/backend/service/OpenAiEvaluationServiceTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/__tests__/NoteEditor.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/__tests__/NoteEditor.spec.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/stores/__tests__/notesStore.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/stores/__tests__/notesStore.spec.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/utils/__tests__/progress.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/__tests__/progress.spec.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -437,7 +434,23 @@
       <option name="project" value="LOCAL" />
       <updated>1787644998825</updated>
     </task>
-    <option name="localTasksCounter" value="25" />
+    <task id="LOCAL-00025" summary="create todos from feedback">
+      <option name="closed" value="true" />
+      <created>1787645846989</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1787645846989</updated>
+    </task>
+    <task id="LOCAL-00026" summary="create todos from feedback">
+      <option name="closed" value="true" />
+      <created>1787645871433</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1787645871433</updated>
+    </task>
+    <option name="localTasksCounter" value="27" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -468,7 +481,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="FLP2 on page click to create text box" />
-    <MESSAGE value="FLP2 on page click to create text box" />
     <MESSAGE value="when textbox is empty it gets deleted" />
     <MESSAGE value="show full textbox all the time (dont collapse when somewhere else clicked)" />
     <MESSAGE value="refactor textbox functionality to be own component" />
@@ -492,7 +504,8 @@
     <MESSAGE value="fix tests" />
     <MESSAGE value="use better model" />
     <MESSAGE value="get basic feed back text." />
-    <option name="LAST_COMMIT_MESSAGE" value="get basic feed back text." />
+    <MESSAGE value="create todos from feedback" />
+    <option name="LAST_COMMIT_MESSAGE" value="create todos from feedback" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

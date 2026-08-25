@@ -6,7 +6,10 @@ import {
   setProgress,
   setLiveScores,
   clearProgress,
-  DEFAULT_PROGRESS
+  DEFAULT_PROGRESS,
+  getFeedback,
+  getTodos,
+  scoreVersion
 } from '@/utils/progress'
 
 describe('progressLevel', () => {
@@ -79,6 +82,46 @@ describe('getProgress', () => {
     setProgress('nb-1', 50)
     clearProgress()
     expect(getProgress('nb-1')).toBe(DEFAULT_PROGRESS)
+  })
+})
+
+describe('feedback + to-dos cache', () => {
+  beforeEach(() => {
+    clearProgress()
+  })
+
+  it('returns empty defaults for unknown ids', () => {
+    expect(getFeedback('nope')).toBe('')
+    expect(getTodos('nope')).toEqual([])
+  })
+
+  it('stores feedback and todos via setLiveScores', () => {
+    setLiveScores({
+      'pg-1': { score: 40, feedback: 'Explain it more simply', todos: ['Add example', 'Explain why'] }
+    })
+    expect(getFeedback('pg-1')).toBe('Explain it more simply')
+    expect(getTodos('pg-1')).toEqual(['Add example', 'Explain why'])
+  })
+
+  it('leaves feedback/todos untouched when absent from a later update', () => {
+    setLiveScores({ 'pg-1': { score: 40, feedback: 'first', todos: ['a'] } })
+    setLiveScores({ 'pg-1': { score: 90 } }) // score-only update
+    expect(getFeedback('pg-1')).toBe('first')
+    expect(getTodos('pg-1')).toEqual(['a'])
+    expect(getProgress('pg-1')).toBe(90)
+  })
+
+  it('clearProgress also clears feedback and todos', () => {
+    setLiveScores({ 'pg-1': { score: 40, feedback: 'x', todos: ['a'] } })
+    clearProgress()
+    expect(getFeedback('pg-1')).toBe('')
+    expect(getTodos('pg-1')).toEqual([])
+  })
+
+  it('bumps scoreVersion when scores change (for reactivity)', () => {
+    const before = scoreVersion.value
+    setLiveScores({ 'pg-1': { score: 10 } })
+    expect(scoreVersion.value).toBeGreaterThan(before)
   })
 })
 
