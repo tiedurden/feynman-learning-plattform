@@ -11,6 +11,8 @@ const emit = defineEmits<{
   (e: 'close'): void
   /** Fired after a formatting command has been applied to the selection. */
   (e: 'applied'): void
+  /** Ask the host to open the shared link dialog for the current selection. */
+  (e: 'request-link', payload: { text: string }): void
 }>()
 
 /** A few tasteful text / highlight colours. */
@@ -188,25 +190,14 @@ function toggleInlineCode() {
 }
 
 /**
- * Turn the selection into a link. Prompts for a URL, normalises it to a safe
- * protocol, and marks the anchor with `rel="noopener"` + `target="_blank"`.
+ * Open the shared link dialog for the current selection. The host (NoteEditor)
+ * owns the modal and performs the actual insertion once the user confirms,
+ * supporting both external URLs and internal page links.
  */
 function insertLink() {
-  const input = window.prompt('Link URL:', 'https://')
-  if (!input) return
-  const url = /^(https?:|mailto:)/i.test(input) ? input : `https://${input}`
-  restoreSelection()
-  document.execCommand('createLink', false, url)
-  // Harden every anchor in the owning editable (new + any missing attrs).
-  const host = document.activeElement
-  if (host instanceof HTMLElement) {
-    host.querySelectorAll('a[href]').forEach((a) => {
-      a.setAttribute('rel', 'noopener noreferrer')
-      a.setAttribute('target', '_blank')
-    })
-  }
   saveSelection()
-  notifyChanged()
+  const text = savedRange ? savedRange.toString() : ''
+  emit('request-link', { text })
 }
 
 /** Insert a horizontal divider line at the caret. */

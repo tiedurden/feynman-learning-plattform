@@ -29,7 +29,12 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        # Remove any platform-locked lockfile so npm resolves the correct
+        # native binaries (e.g. @rollup/rollup-linux-x64-gnu) for the runner.
+        # Works around npm optional-dependency bug npm/cli#4828.
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
 
       - name: Run unit tests
         run: npm run test

@@ -86,5 +86,64 @@ describe('ReferenceModal', () => {
     expect(wrapper.emitted('cancel')).toBeTruthy()
     wrapper.unmount()
   })
+
+  describe('link-type tabs', () => {
+    it('shows the Page tab first and selected by default', async () => {
+      const wrapper = await openModal({ initialText: 'X' })
+      const tabs = document.querySelectorAll('.kind-tab')
+      expect(tabs[0].textContent).toContain('Page')
+      expect(tabs[0].classList.contains('active')).toBe(true)
+      expect(tabs[1].textContent).toContain('Web')
+      wrapper.unmount()
+    })
+
+    it('confirms a web link with a normalized URL payload', async () => {
+      const wrapper = await openModal({ initialText: 'Google' })
+      // Switch to the Web URL tab (second tab).
+      ;(document.querySelectorAll('.kind-tab')[1] as HTMLElement).click()
+      await wrapper.vm.$nextTick()
+
+      const url = document.querySelector(
+        'input[placeholder="https://example.com"]'
+      ) as HTMLInputElement
+      url.value = 'example.com'
+      url.dispatchEvent(new Event('input'))
+      await wrapper.vm.$nextTick()
+
+      const submit = document.querySelectorAll('.dialog-actions .btn')[1] as HTMLButtonElement
+      expect(submit.disabled).toBe(false)
+      submit.click()
+
+      expect(wrapper.emitted('confirm')![0][0]).toEqual({
+        linkText: 'Google',
+        url: 'https://example.com'
+      })
+      wrapper.unmount()
+    })
+
+    it('pre-fills the URL field in web edit mode and re-emits it', async () => {
+      const wrapper = await openModal({
+        initialText: 'Anchor',
+        mode: 'edit',
+        initialKind: 'web',
+        initialUrl: 'https://a.com'
+      })
+
+      const url = document.querySelector(
+        'input[placeholder="https://example.com"]'
+      ) as HTMLInputElement
+      expect(url.value).toBe('https://a.com')
+
+      const submit = document.querySelectorAll('.dialog-actions .btn')[1] as HTMLButtonElement
+      expect(submit.disabled).toBe(false)
+      submit.click()
+
+      expect(wrapper.emitted('confirm')![0][0]).toEqual({
+        linkText: 'Anchor',
+        url: 'https://a.com'
+      })
+      wrapper.unmount()
+    })
+  })
 })
 

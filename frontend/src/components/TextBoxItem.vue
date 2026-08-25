@@ -17,6 +17,12 @@ const emit = defineEmits<{
   (e: 'blur'): void
   (e: 'drag-start', event: MouseEvent): void
   (e: 'request-format', event: MouseEvent): void
+  /** Ctrl/Cmd-click on an internal page link — carries the target page id. */
+  (e: 'navigate', pageId: string): void
+  /** Hovering an internal page link (or null when the pointer leaves one). */
+  (e: 'ref-hover', payload: { pageId: string; rect: DOMRect } | null): void
+  /** Right-click on an existing link — request the edit/remove menu. */
+  (e: 'request-link-menu', payload: { x: number; y: number; anchor: HTMLAnchorElement }): void
 }>()
 
 const editableEl = ref<HTMLDivElement | null>(null)
@@ -104,6 +110,63 @@ function placeCaretAtEnd() {
   sel?.addRange(range)
 }
 
+// --- Link interaction -------------------------------------------------------
+// TODO: right-click editing/removal of an existing link via LinkContextMenu.
+
+/**
+ * Following a link. Internal page links (`a.page-link[data-page-id]`) navigate
+ * on a plain click — matching note-app expectations. External anchors require
+ * Ctrl/Cmd-click so normal text editing near them isn't hijacked into opening a
+ * tab. Any other plain click just places the caret (normal editing).
+ */
+function handleClick(event: MouseEvent) {
+  const anchor = (event.target as HTMLElement).closest('a')
+  if (!anchor) return
+  // Clicking navigates/opens, so the box may unmount before `pointerout`
+  // fires — dismiss any hover tooltip explicitly.
+  emit('ref-hover', null)
+  const pageId = anchor.getAttribute('data-page-id')
+  if (pageId) {
+    event.preventDefault()
+    emit('navigate', pageId)
+    return
+  }
+  if (event.ctrlKey || event.metaKey) {
+    event.preventDefault()
+    const href = anchor.getAttribute('href')
+    if (href) window.open(href, '_blank', 'noopener,noreferrer')
+  }
+}
+
+/** Surface a breadcrumb tooltip while hovering an internal page link. */
+function handlePointerOver(event: MouseEvent) {
+  const link = (event.target as HTMLElement).closest('a.page-link') as HTMLElement | null
+  const pageId = link?.getAttribute('data-page-id')
+  if (link && pageId) {
+    emit('ref-hover', { pageId, rect: link.getBoundingClientRect() })
+  }
+}
+
+function handlePointerOut(event: MouseEvent) {
+  const link = (event.target as HTMLElement).closest('a.page-link')
+  if (link) emit('ref-hover', null)
+}
+
+/**
+ * Right-clicking a link opens the link edit/remove menu (owned by NoteEditor)
+ * instead of the generic formatting menu. Anywhere else keeps the format menu.
+ */
+function handleContextMenu(event: MouseEvent) {
+  const anchor = (event.target as HTMLElement).closest('a') as HTMLAnchorElement | null
+  if (anchor) {
+    event.preventDefault()
+    event.stopPropagation()
+    emit('request-link-menu', { x: event.clientX, y: event.clientY, anchor })
+    return
+  }
+  emit('request-format', event)
+}
+
 onMounted(() => {
   syncFromProp()
   if (props.focusOnMount) placeCaretAtEnd()
@@ -149,7 +212,10 @@ defineExpose({
       @change="handleChange"
       @paste="handlePaste"
       @blur="emit('blur')"
-      @contextmenu="emit('request-format', $event)"
+      @click="handleClick"
+      @pointerover="handlePointerOver"
+      @pointerout="handlePointerOut"
+      @contextmenu="handleContextMenu"
     />
   </div>
 </template>
@@ -256,6 +322,12 @@ defineExpose({
 .text-box :deep(a) {
   color: var(--accent, #7719aa);
   text-decoration: underline;
+}
+/* Internal page links read differently from external web links. */
+.text-box :deep(a.page-link) {
+  color: #0f6cbd;
+  text-decoration-style: dotted;
+  cursor: pointer;
 }
 
 /* A brand-new, not-yet-saved box is clearly visible so you know it worked. */
