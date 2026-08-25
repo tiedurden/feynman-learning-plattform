@@ -55,7 +55,7 @@ class OpenAiEvaluationServiceTest {
 
         EvaluationResponse res = service.evaluate(new EvaluateRequest(
                 List.of(new NotebookDto("nb-1", "N", "#000")),
-                List.of(p1, p2), null));
+                List.of(p1, p2), null, null));
 
         int expected = Math.round(
                 (res.pageScores().get("pg-1").score() + res.pageScores().get("pg-2").score()) / 2f);
@@ -67,7 +67,7 @@ class OpenAiEvaluationServiceTest {
         OpenAiEvaluationService service = newMockService();
         PageDto empty = new PageDto("pg-empty", "nb-1", null, "Empty", "   ", List.of(), 0);
         EvaluationResponse res = service.evaluate(
-                new EvaluateRequest(List.of(), List.of(empty), null));
+                new EvaluateRequest(List.of(), List.of(empty), null, null));
         assertEquals(0, res.pageScores().get("pg-empty").score());
     }
 
@@ -80,12 +80,35 @@ class OpenAiEvaluationServiceTest {
         EvaluationResponse res = service.evaluate(new EvaluateRequest(
                 List.of(new NotebookDto("nb-1", "One", "#000"),
                         new NotebookDto("nb-2", "Two", "#111")),
-                List.of(a, b), "nb-1"));
+                List.of(a, b), "nb-1", null));
 
         assertTrue(res.pageScores().containsKey("pg-a"));
         assertTrue(!res.pageScores().containsKey("pg-b"), "Filtered notebook page must be excluded");
         assertTrue(res.notebookScores().containsKey("nb-1"));
         assertTrue(!res.notebookScores().containsKey("nb-2"));
+    }
+
+    @Test
+    void pageIdFilterScoresOnlyThatPageAndSkipsNotebookAggregation() {
+        OpenAiEvaluationService service = newMockService();
+        // A parent page and two sibling subpages all in the same notebook.
+        PageDto parent = new PageDto("pg-parent", "nb-1", null, "Parent", "alpha beta gamma", List.of(), 0);
+        PageDto child1 = new PageDto("pg-child-1", "nb-1", "pg-parent", "Child 1", "delta epsilon", List.of(), 0);
+        PageDto child2 = new PageDto("pg-child-2", "nb-1", "pg-parent", "Child 2", "zeta eta theta", List.of(), 1);
+
+        EvaluationResponse res = service.evaluate(new EvaluateRequest(
+                List.of(new NotebookDto("nb-1", "One", "#000")),
+                List.of(parent, child1, child2), "nb-1", "pg-child-1"));
+
+        // Only the requested subpage is scored; parent and sibling are untouched.
+        assertTrue(res.pageScores().containsKey("pg-child-1"));
+        assertEquals(1, res.pageScores().size(), "Only the requested page should be scored");
+        assertFalse(res.pageScores().containsKey("pg-parent"));
+        assertFalse(res.pageScores().containsKey("pg-child-2"));
+
+        // Notebook aggregation is skipped so a single page cannot clobber the
+        // notebook's real average.
+        assertTrue(res.notebookScores().isEmpty(), "Single-page requests must not aggregate notebooks");
     }
 
     // --- Mock scoring bands -----------------------------------------------------
@@ -211,7 +234,7 @@ class OpenAiEvaluationServiceTest {
         PageDto page = new PageDto("pg-a", "nb-1", null, "A", "brief", List.of(), 0);
 
         EvaluationResponse res = service.evaluate(new EvaluateRequest(
-                List.of(new NotebookDto("nb-1", "N", "#000")), List.of(page), null));
+                List.of(new NotebookDto("nb-1", "N", "#000")), List.of(page), null, null));
 
         ScoreDto pageScore = res.pageScores().get("pg-a");
         assertFalse(pageScore.feedback().isBlank());

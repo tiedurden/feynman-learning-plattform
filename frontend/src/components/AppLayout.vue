@@ -125,12 +125,20 @@ function navigateToPage(targetPageId: string) {
   })
 }
 
+/** Evaluate only the currently active page (no parent/sibling subpages). */
+function evaluateActivePage() {
+  if (!activeNotebookId.value || !activePageId.value) return
+  // Ensure progress badges are visible so the user sees the result.
+  store.setShowProgress(true)
+  progress.evaluate({ notebookId: activeNotebookId.value, pageId: activePageId.value })
+}
+
 /** Evaluate only the currently active notebook. */
 function evaluateActiveNotebook() {
   if (!activeNotebookId.value) return
   // Ensure progress badges are visible so the user sees the result.
   store.setShowProgress(true)
-  progress.evaluate(activeNotebookId.value)
+  progress.evaluate({ notebookId: activeNotebookId.value })
 }
 
 /** Evaluate every notebook in one request. */
@@ -159,6 +167,15 @@ function evaluateAll() {
         >
           Evaluated ✓
         </span>
+
+        <button
+          class="btn"
+          :disabled="progress.loading || !activePage"
+          @click="evaluateActivePage"
+        >
+          <span v-if="progress.loading" class="spinner" aria-hidden="true"></span>
+          {{ progress.loading ? 'Evaluating…' : 'Evaluate Page' }}
+        </button>
 
         <button
           class="btn"

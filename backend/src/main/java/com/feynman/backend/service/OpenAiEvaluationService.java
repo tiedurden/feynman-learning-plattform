@@ -57,20 +57,32 @@ public class OpenAiEvaluationService {
     /**
      * Score every page, then aggregate page scores into a notebook score.
      * When {@code request.notebookId()} is set, only that notebook and its
-     * pages are evaluated.
+     * pages are evaluated. When {@code request.pageId()} is set, only that
+     * single page is scored and notebook aggregation is skipped — this keeps
+     * the request cheap for notebooks with many pages/subpages.
      */
     public EvaluationResponse evaluate(EvaluateRequest request) {
         String filterId = request.notebookId();
+        String pageId = request.pageId();
+        boolean singlePage = pageId != null && !pageId.isBlank();
 
-        List<NotebookDto> notebooks = (request.notebooks() == null ? List.<NotebookDto>of() : request.notebooks())
-                .stream()
-                .filter(nb -> filterId == null || filterId.equals(nb.id()))
-                .toList();
-
+        // A single-page request scores only that page; a notebook request scores
+        // every page in the notebook; otherwise the whole dataset is scored.
         List<PageDto> pages = (request.pages() == null ? List.<PageDto>of() : request.pages())
                 .stream()
-                .filter(p -> filterId == null || filterId.equals(p.notebookId()))
+                .filter(p -> singlePage
+                        ? pageId.equals(p.id())
+                        : (filterId == null || filterId.equals(p.notebookId())))
                 .toList();
+
+        // Notebook aggregation is meaningless for a single page, so skip it: a
+        // one-page average would otherwise clobber the notebook's real score.
+        List<NotebookDto> notebooks = singlePage
+                ? List.of()
+                : (request.notebooks() == null ? List.<NotebookDto>of() : request.notebooks())
+                        .stream()
+                        .filter(nb -> filterId == null || filterId.equals(nb.id()))
+                        .toList();
 
         if (!properties.useMock() && !properties.hasApiKey() && !pages.isEmpty()) {
             throw new EvaluationException(
