@@ -35,7 +35,7 @@ class OpenAiEvaluationServiceTest {
 
         EvaluateRequest request = new EvaluateRequest(
                 List.of(new NotebookDto("nb-study", "Study", "#c94f0c")),
-                List.of(page), null);
+                List.of(page), null, null);
 
         EvaluationResponse first = service.evaluate(request);
         EvaluationResponse second = service.evaluate(request);
