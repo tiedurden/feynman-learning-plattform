@@ -57,20 +57,32 @@ public class OpenAiEvaluationService {
     /**
      * Score every page, then aggregate page scores into a notebook score.
      * When {@code request.notebookId()} is set, only that notebook and its
-     * pages are evaluated.
+     * pages are evaluated. When {@code request.pageId()} is set, only that
+     * single page is scored and notebook aggregation is skipped — this keeps
+     * the request cheap for notebooks with many pages/subpages.
      */
     public EvaluationResponse evaluate(EvaluateRequest request) {
         String filterId = request.notebookId();
+        String pageId = request.pageId();
+        boolean singlePage = pageId != null && !pageId.isBlank();
 
-        List<NotebookDto> notebooks = (request.notebooks() == null ? List.<NotebookDto>of() : request.notebooks())
-                .stream()
-                .filter(nb -> filterId == null || filterId.equals(nb.id()))
-                .toList();
-
+        // A single-page request scores only that page; a notebook request scores
+        // every page in the notebook; otherwise the whole dataset is scored.
         List<PageDto> pages = (request.pages() == null ? List.<PageDto>of() : request.pages())
                 .stream()
-                .filter(p -> filterId == null || filterId.equals(p.notebookId()))
+                .filter(p -> singlePage
+                        ? pageId.equals(p.id())
+                        : (filterId == null || filterId.equals(p.notebookId())))
                 .toList();
+
+        // Notebook aggregation is meaningless for a single page, so skip it: a
+        // one-page average would otherwise clobber the notebook's real score.
+        List<NotebookDto> notebooks = singlePage
+                ? List.of()
+                : (request.notebooks() == null ? List.<NotebookDto>of() : request.notebooks())
+                        .stream()
+                        .filter(nb -> filterId == null || filterId.equals(nb.id()))
+                        .toList();
 
         if (!properties.useMock() && !properties.hasApiKey() && !pages.isEmpty()) {
             throw new EvaluationException(
@@ -102,10 +114,56 @@ public class OpenAiEvaluationService {
             String notes = scores.isEmpty()
                     ? "No pages to evaluate yet."
                     : "Average understanding across " + scores.size() + " page(s).";
-            notebookScores.put(notebook.id(), new ScoreDto(avg, notes));
+            String notebookFeedback = scores.isEmpty()
+                    ? "Add and evaluate some pages to get feedback for this notebook."
+                    : "Overall this notebook averages " + avg + "% understanding across "
+                        + scores.size() + " page(s). Open individual pages to see targeted feedback "
+                        + "on what to explain more simply or in more depth.";
+            notebookScores.put(notebook.id(), new ScoreDto(avg, notes, notebookFeedback, List.of()));
         }
 
         return new EvaluationResponse(pageScores, notebookScores);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Model discovery
+    // ---------------------------------------------------------------------------
+
+    /**
+     * List the model IDs the configured API key is allowed to use by calling
+     * {@code GET /v1/models}. Useful to discover which models can replace the
+     * default {@code openai.model}.
+     *
+     * @return sorted, distinct list of model IDs returned by the provider.
+     */
+    public List<String> listModels() {
+        try {
+            String responseJson = openAiRestClient.get()
+                    .uri("/models")
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .body(String.class);
+
+            JsonNode data = objectMapper.readTree(responseJson).path("data");
+            List<String> models = new ArrayList<>();
+            for (JsonNode node : data) {
+                String id = node.path("id").asText("");
+                if (!id.isBlank()) {
+                    models.add(id);
+                }
+            }
+            models.sort(String::compareTo);
+            return models;
+        } catch (RestClientResponseException e) {
+            String detail = openAiErrorDetail(
+                    e.getStatusCode().value(), e.getResponseBodyAsString(), properties.model());
+            log.error("Listing models failed — {} Body: {}", detail, e.getResponseBodyAsString());
+            throw new EvaluationException(detail, e);
+        } catch (Exception e) {
+            log.error("Listing models failed. Cause: {}", e.getMessage());
+            throw new EvaluationException(
+                    "Could not list OpenAI models. Check OPENAI_API_KEY, base URL, and network configuration.", e);
+        }
     }
 
     // ---------------------------------------------------------------------------
@@ -115,7 +173,8 @@ public class OpenAiEvaluationService {
     private ScoreDto llmScore(PageDto page) {
         String text = page.combinedText();
         if (text.isBlank()) {
-            return new ScoreDto(0, "Page is empty.");
+            return new ScoreDto(0, "Page is empty.",
+                    "There are no notes on this page yet to give feedback on.", List.of());
         }
 
         String systemPrompt = """
@@ -126,20 +185,31 @@ public class OpenAiEvaluationService {
                 cause/effect reasoning, and coverage. Penalise: sparse notes, unexplained jargon,
                 copy-paste lists without explanation, and contradictions.
                 Respond ONLY with strict JSON of the form:
-                {"score": <integer 0-100>, "understandingNotes": "<one short sentence>"}""";
+                {"score": <integer 0-100>, "understandingNotes": "<one short sentence>", \
+                "feedback": "<2-4 sentences of specific, encouraging, actionable feedback: \
+                what is explained well and what to clarify or expand to understand it better>", \
+                "todos": ["<short imperative action the learner should do next, max ~12 words>", \
+                "<another action>"]}
+                Provide 2-5 todos. Each todo must be a concrete, self-contained action \
+                (e.g. "Add a worked example for Bayes' theorem"). Return an empty array if \
+                the notes are already excellent.""";
 
         String userPrompt = "Title: " + safe(page.title()) + "\n\nNotes:\n" + text;
 
         try {
-            Map<String, Object> body = Map.of(
-                    "model", properties.model(),
-                    "temperature", 0,
-                    "response_format", Map.of("type", "json_object"),
-                    "messages", List.of(
-                            Map.of("role", "system", "content", systemPrompt),
-                            Map.of("role", "user", "content", userPrompt)
-                    )
-            );
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("model", properties.model());
+            // Newer models (gpt-5.x family and the o-series reasoning models) only
+            // accept the default temperature and reject an explicit value with a
+            // 400. Send temperature=0 for determinism only where it's supported.
+            if (supportsCustomTemperature(properties.model())) {
+                body.put("temperature", 0);
+            }
+            body.put("response_format", Map.of("type", "json_object"));
+            body.put("messages", List.of(
+                    Map.of("role", "system", "content", systemPrompt),
+                    Map.of("role", "user", "content", userPrompt)
+            ));
 
             String responseJson = openAiRestClient.post()
                     .uri("/chat/completions")
@@ -154,7 +224,15 @@ public class OpenAiEvaluationService {
 
             int score = clamp(parsed.path("score").asInt(0));
             String notes = parsed.path("understandingNotes").asText("");
-            return new ScoreDto(score, notes);
+            String feedback = parsed.path("feedback").asText("");
+            List<String> todos = new ArrayList<>();
+            for (JsonNode item : parsed.path("todos")) {
+                String todo = item.asText("").trim();
+                if (!todo.isBlank()) {
+                    todos.add(todo);
+                }
+            }
+            return new ScoreDto(score, notes, feedback, todos);
         } catch (RestClientResponseException e) {
             // OpenAI returned an HTTP error — translate common cases into clear,
             // actionable messages instead of a generic failure.
@@ -202,7 +280,8 @@ public class OpenAiEvaluationService {
     ScoreDto mockScore(PageDto page) {
         String text = page.combinedText();
         if (text.isBlank()) {
-            return new ScoreDto(0, "Page is empty.");
+            return new ScoreDto(0, "Page is empty.",
+                    "There are no notes on this page yet to give feedback on.", List.of());
         }
 
         String normalized = text.toLowerCase(Locale.ROOT);
@@ -237,7 +316,58 @@ public class OpenAiEvaluationService {
         int score = clamp(effort + evidence - penalty - severePenalty);
         return new ScoreDto(score,
                 "Heuristic score from " + words
-                        + " word(s), with explanation evidence and uncertainty markers considered (offline mock).");
+                        + " word(s), with explanation evidence and uncertainty markers considered (offline mock).",
+                mockFeedback(score, words, evidence, penalty + severePenalty),
+                mockTodos(words, evidence, penalty + severePenalty));
+    }
+
+    /**
+     * Deterministic offline to-do items that mirror what the heuristic flagged,
+     * so mock mode can populate tick-box to-dos without an API call.
+     */
+    private static List<String> mockTodos(int words, int evidence, int uncertaintyPenalty) {
+        List<String> todos = new ArrayList<>();
+        if (evidence == 0) {
+            todos.add("Explain WHY the key idea is true (use \"because\"/\"therefore\").");
+            todos.add("Add a concrete worked example.");
+        }
+        if (uncertaintyPenalty > 0) {
+            todos.add("Rewrite uncertain phrases as confident explanations.");
+        }
+        if (words < 40) {
+            todos.add("Expand the notes with more detail and coverage.");
+        }
+        if (todos.isEmpty()) {
+            todos.add("Teach the topic aloud from memory to confirm understanding.");
+        }
+        return todos;
+    }
+
+    /**
+     * Deterministic offline feedback that mirrors what the heuristic rewarded or
+     * penalised, so mock mode still shows useful, distinguishable guidance.
+     */
+    private static String mockFeedback(int score, int words, int evidence, int uncertaintyPenalty) {
+        StringBuilder sb = new StringBuilder();
+        if (score >= 75) {
+            sb.append("Strong understanding: your notes explain the topic clearly and in your own words. ");
+        } else if (score >= 33) {
+            sb.append("Developing understanding: the core idea is there but parts could be explained more simply. ");
+        } else {
+            sb.append("Early understanding: the notes are sparse or uncertain, so keep building them up. ");
+        }
+        if (evidence > 0) {
+            sb.append("Good use of reasoning and examples (\"because\", \"for example\", etc.). ");
+        } else {
+            sb.append("Try adding cause/effect reasoning (\"because\", \"therefore\") and a worked example. ");
+        }
+        if (uncertaintyPenalty > 0) {
+            sb.append("Some phrases signal uncertainty — revisit those and rewrite them as confident explanations. ");
+        }
+        if (words < 40) {
+            sb.append("Expanding the notes with more detail would demonstrate deeper understanding.");
+        }
+        return sb.toString().trim() + " (offline mock feedback)";
     }
 
     private static int countOccurrences(String text, String... terms) {
@@ -254,6 +384,23 @@ public class OpenAiEvaluationService {
 
     private static int clamp(int v) {
         return Math.max(0, Math.min(100, v));
+    }
+
+    /**
+     * Whether a model accepts an explicit {@code temperature} value. The
+     * gpt-5.x family and the o-series reasoning models (o1/o3/o4) only support
+     * the default temperature and return HTTP 400 for any explicit value.
+     */
+    static boolean supportsCustomTemperature(String model) {
+        if (model == null) {
+            return true;
+        }
+        String m = model.toLowerCase(Locale.ROOT);
+        boolean fixedTemperature = m.startsWith("gpt-5")
+                || m.startsWith("o1")
+                || m.startsWith("o3")
+                || m.startsWith("o4");
+        return !fixedTemperature;
     }
 
     private static String safe(String s) {

@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useNotesStore } from '@/stores/notesStore'
 
 const STORAGE_KEY = 'onenote-notes:v2'
+const UI_STORAGE_KEY = 'onenote-ui:v1'
 
 describe('notesStore — happy paths', () => {
   beforeEach(() => {
@@ -336,6 +337,51 @@ describe('notesStore — inline references (links)', () => {
     const store = useNotesStore()
 
     expect(store.pageById('pg-1')!.boxes[0].references).toEqual([])
+  })
+})
+
+describe('notesStore — UI preferences', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+
+  it('defaults showFeedback to true and showProgress to false', () => {
+    const store = useNotesStore()
+    expect(store.showFeedback).toBe(true)
+    expect(store.showProgress).toBe(false)
+  })
+
+  it('setShowFeedback toggles and persists', () => {
+    const store = useNotesStore()
+    store.setShowFeedback(false)
+    expect(store.showFeedback).toBe(false)
+
+    const raw = JSON.parse(localStorage.getItem(UI_STORAGE_KEY)!)
+    expect(raw.showFeedback).toBe(false)
+  })
+
+  it('setShowFeedback with no argument flips the current value', () => {
+    const store = useNotesStore()
+    expect(store.showFeedback).toBe(true)
+    store.setShowFeedback()
+    expect(store.showFeedback).toBe(false)
+  })
+
+  it('persists showProgress and showFeedback together (no clobbering)', () => {
+    const store = useNotesStore()
+    store.setShowProgress(true)
+    store.setShowFeedback(false)
+
+    const raw = JSON.parse(localStorage.getItem(UI_STORAGE_KEY)!)
+    expect(raw).toEqual({ showProgress: true, showFeedback: false })
+  })
+
+  it('loads a persisted showFeedback=false preference', () => {
+    localStorage.setItem(UI_STORAGE_KEY, JSON.stringify({ showFeedback: false }))
+    setActivePinia(createPinia())
+    const store = useNotesStore()
+    expect(store.showFeedback).toBe(false)
   })
 })
 

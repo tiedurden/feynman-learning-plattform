@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { Page, TextBox } from '@/types'
 import { useNotesStore } from '@/stores/notesStore'
+import { getFeedback, getTodos, scoreVersion } from '@/utils/progress'
 import TextBoxItem from './TextBoxItem.vue'
 import FormatMenu from './FormatMenu.vue'
 import ReferenceModal from './ReferenceModal.vue'
@@ -14,6 +15,7 @@ interface LinkMenuItem {
   danger?: boolean
   action: () => void
 }
+import ToggleSwitch from './ToggleSwitch.vue'
 
 const props = defineProps<{
   page?: Page
@@ -30,6 +32,66 @@ const store = useNotesStore()
 const title = computed({
   get: () => props.page?.title ?? '',
   set: (v: string) => emit('update', { title: v })
+})
+
+/** The model's feedback for the current page (empty until evaluated). */
+const feedback = computed(() => {
+  // Depend on the reactive version so the callout refreshes after evaluation.
+  void scoreVersion.value
+  return props.page ? getFeedback(props.page.id) : ''
+})
+
+/** The model's actionable to-do items for the current page. */
+const todos = computed<string[]>(() => {
+  void scoreVersion.value
+  return props.page ? getTodos(props.page.id) : []
+})
+
+/** Escape user/LLM text before embedding it in tick-box HTML. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+/**
+ * Turn the feedback's to-do items into a new text box of interactive tick
+ * boxes, placed at the top of the page (existing boxes shift down to make room).
+ */
+function createTodos() {
+  if (!props.page || todos.value.length === 0) return
+
+  // Mirror FormatMenu's tick-box markup so it renders and persists identically.
+  const items = todos.value
+    .map(
+      (t) =>
+        `<div><span class="tick" contenteditable="false">` +
+        `<input type="checkbox"></span>&nbsp;${escapeHtml(t)}</div>`
+    )
+    .join('')
+  const html = `<div><strong>To-dos from feedback</strong></div>${items}`
+
+  // Estimated height of the new box (header + one line per todo + padding),
+  // used to push existing boxes down so the to-dos sit cleanly at the top.
+  const TOP = 24
+  const LINE_HEIGHT = 26
+  const boxHeight = (todos.value.length + 1) * LINE_HEIGHT + 24
+  const shift = TOP + boxHeight + 16
+
+  // Shift existing boxes down first so the new to-dos box does not overlap them.
+  for (const box of props.page.boxes ?? []) {
+    store.updateTextBox(props.page.id, box.id, { y: box.y + shift })
+  }
+
+  store.addTextBox(props.page.id, { x: 24, y: TOP, text: html })
+}
+
+/** Whether the feedback callout should currently be visible. */
+const showFeedback = computed({
+  get: () => store.showFeedback,
+  set: (v: boolean) => store.setShowFeedback(v)
 })
 
 /** Draft boxes exist only locally until they contain text. */
@@ -329,7 +391,33 @@ function onDragUp() {
         placeholder="Untitled Page"
         spellcheck="false"
       />
-      <div class="meta">Click anywhere below to add a text box</div>
+      <div class="meta">
+        <span>Click anywhere below to add a text box</span>
+        <ToggleSwitch
+          v-if="feedback"
+          v-model="showFeedback"
+          label="Show feedback"
+          tone="light"
+        />
+      </div>
+
+      <!-- Model-generated feedback callout (distinct from note content). -->
+      <aside v-if="feedback && showFeedback" class="feedback-callout" role="note">
+        <div class="feedback-header">
+          <span class="feedback-icon" aria-hidden="true">💡</span>
+          <span class="feedback-title">Feynman feedback</span>
+          <button
+            v-if="todos.length"
+            type="button"
+            class="todo-btn"
+            :title="`Add ${todos.length} to-do item(s) as tick boxes on this page`"
+            @click="createTodos"
+          >
+            ☑ Create {{ todos.length }} to-do{{ todos.length === 1 ? '' : 's' }}
+          </button>
+        </div>
+        <p class="feedback-body">{{ feedback }}</p>
+      </aside>
 
       <div
         ref="canvasRef"
@@ -442,11 +530,63 @@ function onDragUp() {
 }
 
 .meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   color: var(--text-muted);
   font-size: 12px;
   border-bottom: 1px solid var(--sidebar-border);
   padding-bottom: 12px;
   margin-bottom: 16px;
+}
+
+/* Model feedback callout — visually distinct from the note canvas. */
+.feedback-callout {
+  border: 1px solid var(--accent, #7719aa);
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent, #7719aa) 8%, #fff);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+.feedback-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.feedback-icon {
+  font-size: 14px;
+}
+.feedback-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--accent, #7719aa);
+}
+.todo-btn {
+  margin-left: auto;
+  border: 1px solid var(--accent, #7719aa);
+  background: #fff;
+  color: var(--accent, #7719aa);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.todo-btn:hover {
+  background: color-mix(in srgb, var(--accent, #7719aa) 12%, #fff);
+}
+.feedback-body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-line;
 }
 
 /* The free-positioning surface. */

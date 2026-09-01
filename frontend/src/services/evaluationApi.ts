@@ -12,6 +12,10 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 export interface Score {
   score: number
   understandingNotes: string
+  /** Longer, actionable Feynman-style feedback paragraph. May be empty. */
+  feedback?: string
+  /** Short, actionable to-do items the UI can turn into tick boxes. */
+  todos?: string[]
 }
 
 /** Response shape of {@code POST /api/evaluate}. */
@@ -32,12 +36,13 @@ export interface EvaluationResult {
 export async function evaluateNotes(
   notebooks: Notebook[],
   pages: Page[],
-  notebookId?: string
+  notebookId?: string,
+  pageId?: string
 ): Promise<EvaluationResult> {
   const res = await fetch(`${API_BASE_URL}/api/evaluate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ notebooks, pages, notebookId })
+    body: JSON.stringify({ notebooks, pages, notebookId, pageId })
   })
 
   if (!res.ok) {
@@ -46,3 +51,5 @@ export async function evaluateNotes(
 
   return (await res.json()) as EvaluationResult
 }
+
+

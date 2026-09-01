@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -34,7 +35,7 @@ class OpenAiEvaluationServiceTest {
 
         EvaluateRequest request = new EvaluateRequest(
                 List.of(new NotebookDto("nb-study", "Study", "#c94f0c")),
-                List.of(page), null);
+                List.of(page), null, null);
 
         EvaluationResponse first = service.evaluate(request);
         EvaluationResponse second = service.evaluate(request);
@@ -54,7 +55,7 @@ class OpenAiEvaluationServiceTest {
 
         EvaluationResponse res = service.evaluate(new EvaluateRequest(
                 List.of(new NotebookDto("nb-1", "N", "#000")),
-                List.of(p1, p2), null));
+                List.of(p1, p2), null, null));
 
         int expected = Math.round(
                 (res.pageScores().get("pg-1").score() + res.pageScores().get("pg-2").score()) / 2f);
@@ -66,7 +67,7 @@ class OpenAiEvaluationServiceTest {
         OpenAiEvaluationService service = newMockService();
         PageDto empty = new PageDto("pg-empty", "nb-1", null, "Empty", "   ", List.of(), 0);
         EvaluationResponse res = service.evaluate(
-                new EvaluateRequest(List.of(), List.of(empty), null));
+                new EvaluateRequest(List.of(), List.of(empty), null, null));
         assertEquals(0, res.pageScores().get("pg-empty").score());
     }
 
@@ -79,12 +80,35 @@ class OpenAiEvaluationServiceTest {
         EvaluationResponse res = service.evaluate(new EvaluateRequest(
                 List.of(new NotebookDto("nb-1", "One", "#000"),
                         new NotebookDto("nb-2", "Two", "#111")),
-                List.of(a, b), "nb-1"));
+                List.of(a, b), "nb-1", null));
 
         assertTrue(res.pageScores().containsKey("pg-a"));
         assertTrue(!res.pageScores().containsKey("pg-b"), "Filtered notebook page must be excluded");
         assertTrue(res.notebookScores().containsKey("nb-1"));
         assertTrue(!res.notebookScores().containsKey("nb-2"));
+    }
+
+    @Test
+    void pageIdFilterScoresOnlyThatPageAndSkipsNotebookAggregation() {
+        OpenAiEvaluationService service = newMockService();
+        // A parent page and two sibling subpages all in the same notebook.
+        PageDto parent = new PageDto("pg-parent", "nb-1", null, "Parent", "alpha beta gamma", List.of(), 0);
+        PageDto child1 = new PageDto("pg-child-1", "nb-1", "pg-parent", "Child 1", "delta epsilon", List.of(), 0);
+        PageDto child2 = new PageDto("pg-child-2", "nb-1", "pg-parent", "Child 2", "zeta eta theta", List.of(), 1);
+
+        EvaluationResponse res = service.evaluate(new EvaluateRequest(
+                List.of(new NotebookDto("nb-1", "One", "#000")),
+                List.of(parent, child1, child2), "nb-1", "pg-child-1"));
+
+        // Only the requested subpage is scored; parent and sibling are untouched.
+        assertTrue(res.pageScores().containsKey("pg-child-1"));
+        assertEquals(1, res.pageScores().size(), "Only the requested page should be scored");
+        assertFalse(res.pageScores().containsKey("pg-parent"));
+        assertFalse(res.pageScores().containsKey("pg-child-2"));
+
+        // Notebook aggregation is skipped so a single page cannot clobber the
+        // notebook's real average.
+        assertTrue(res.notebookScores().isEmpty(), "Single-page requests must not aggregate notebooks");
     }
 
     // --- Mock scoring bands -----------------------------------------------------
@@ -154,6 +178,70 @@ class OpenAiEvaluationServiceTest {
                 .toLowerCase().contains("rate limit"), "429 non-quota should mention rate limit");
         assertTrue(OpenAiEvaluationService.openAiErrorDetail(500, "", "gpt-4o-mini")
                 .contains("500"), "Unknown status should include the code");
+    }
+
+    // --- Temperature capability -------------------------------------------------
+
+    @Test
+    void temperatureOnlySentForSupportedModels() {
+        // gpt-5.x and o-series reject an explicit temperature (HTTP 400).
+        assertFalse(OpenAiEvaluationService.supportsCustomTemperature("gpt-5.5"));
+        assertFalse(OpenAiEvaluationService.supportsCustomTemperature("gpt-5.5-pro"));
+        assertFalse(OpenAiEvaluationService.supportsCustomTemperature("o1"));
+        assertFalse(OpenAiEvaluationService.supportsCustomTemperature("o3-mini"));
+        assertFalse(OpenAiEvaluationService.supportsCustomTemperature("o4-mini"));
+        // Older chat models still accept temperature=0 for determinism.
+        assertTrue(OpenAiEvaluationService.supportsCustomTemperature("gpt-4o"));
+        assertTrue(OpenAiEvaluationService.supportsCustomTemperature("gpt-4o-mini"));
+        assertTrue(OpenAiEvaluationService.supportsCustomTemperature("gpt-4.1"));
+        assertTrue(OpenAiEvaluationService.supportsCustomTemperature(null));
+    }
+
+    // --- Feedback and to-dos ----------------------------------------------------
+
+    @Test
+    void mockScoreProducesFeedbackAndTodos() {
+        OpenAiEvaluationService service = newMockService();
+        PageDto sparse = new PageDto("pg-x", "nb", null, "Topic", "a short note", List.of(), 0);
+
+        ScoreDto s = service.mockScore(sparse);
+
+        assertFalse(s.feedback().isBlank(), "Mock feedback must not be blank");
+        assertFalse(s.todos().isEmpty(), "Sparse notes should yield actionable to-dos");
+    }
+
+    @Test
+    void emptyPageHasFeedbackButNoTodos() {
+        OpenAiEvaluationService service = newMockService();
+        PageDto empty = new PageDto("pg-empty", "nb", null, "Empty", "   ", List.of(), 0);
+
+        ScoreDto s = service.mockScore(empty);
+
+        assertEquals(0, s.score());
+        assertFalse(s.feedback().isBlank(), "Empty page should still explain there is nothing to grade");
+        assertTrue(s.todos().isEmpty(), "Empty page should have no to-dos");
+    }
+
+    @Test
+    void scoreDtoGuaranteesNonNullTodos() {
+        ScoreDto s = new ScoreDto(50, "notes", "feedback", null);
+        assertTrue(s.todos().isEmpty(), "null todos must normalise to an empty list");
+    }
+
+    @Test
+    void evaluatePopulatesFeedbackAndTodosViaMock() {
+        OpenAiEvaluationService service = newMockService();
+        PageDto page = new PageDto("pg-a", "nb-1", null, "A", "brief", List.of(), 0);
+
+        EvaluationResponse res = service.evaluate(new EvaluateRequest(
+                List.of(new NotebookDto("nb-1", "N", "#000")), List.of(page), null, null));
+
+        ScoreDto pageScore = res.pageScores().get("pg-a");
+        assertFalse(pageScore.feedback().isBlank());
+        assertFalse(pageScore.todos().isEmpty());
+        // Notebook aggregation carries feedback but no page-level to-dos.
+        assertFalse(res.notebookScores().get("nb-1").feedback().isBlank());
+        assertTrue(res.notebookScores().get("nb-1").todos().isEmpty());
     }
 }
 
