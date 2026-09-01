@@ -21,7 +21,7 @@ class OpenAiEvaluationServiceTest {
 
     private OpenAiEvaluationService newMockService() {
         OpenAiProperties props = new OpenAiProperties("", "gpt-4o-mini",
-                "https://api.openai.com/v1", true);
+                "gpt-4o-audio-preview", "https://api.openai.com/v1", true);
         return new OpenAiEvaluationService(null, props);
     }
 

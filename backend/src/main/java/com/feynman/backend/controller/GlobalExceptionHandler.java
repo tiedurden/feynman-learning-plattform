@@ -1,6 +1,7 @@
 package com.feynman.backend.controller;
 
 import com.feynman.backend.service.OpenAiEvaluationService.EvaluationException;
+import com.feynman.backend.service.VoiceChatService.VoiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -33,6 +34,15 @@ public class GlobalExceptionHandler {
         log.error("Evaluation failed", ex);
         ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.BAD_GATEWAY);
         pd.setTitle("Evaluation failed");
+        pd.setDetail(ex.getMessage());
+        return pd;
+    }
+
+    @ExceptionHandler(VoiceException.class)
+    public ProblemDetail handleVoice(VoiceException ex) {
+        log.error("Voice chat failed", ex);
+        ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.BAD_GATEWAY);
+        pd.setTitle("Voice chat failed");
         pd.setDetail(ex.getMessage());
         return pd;
     }
