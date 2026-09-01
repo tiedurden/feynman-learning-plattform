@@ -11,10 +11,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class VoiceChatService {
@@ -42,6 +46,13 @@ public class VoiceChatService {
             case "mpeg", "x-mpeg", "mp4", "x-m4a", "m4a" -> "mp3";
             default -> rawFormat;
         };
+
+        // gpt-audio rejects ogg outright, so transcode it to wav via ffmpeg first
+        if ("ogg".equals(audioFormat)) {
+            audioBytes = convertOggToWav(audioBytes);
+            audioFormat = "wav";
+        }
+
         if (!SUPPORTED_FORMATS.contains(audioFormat)) {
             throw new VoiceException(
                     "Unsupported audio format '" + audioFormat + "'. Send wav or mp3.");
@@ -94,6 +105,53 @@ public class VoiceChatService {
             log.error("Voice chat failed. Cause: {}", e.getMessage());
             throw new VoiceException(
                     "Voice chat failed. Check OPENAI_API_KEY, audio-model, and network configuration.", e);
+        }
+    }
+
+    /** Shells out to the system {@code ffmpeg} binary to transcode Ogg/Vorbis audio to PCM WAV. */
+    private byte[] convertOggToWav(byte[] oggBytes) {
+        Path oggFile = null;
+        Path wavFile = null;
+        try {
+            oggFile = Files.createTempFile("voice-", ".ogg");
+            wavFile = Files.createTempFile("voice-", ".wav");
+            Files.write(oggFile, oggBytes);
+
+            Process process = new ProcessBuilder(
+                    "ffmpeg", "-y", "-i", oggFile.toString(),
+                    "-ar", "24000", "-ac", "1", wavFile.toString())
+                    .redirectErrorStream(true)
+                    .start();
+
+            if (!process.waitFor(30, TimeUnit.SECONDS)) {
+                process.destroyForcibly();
+                throw new VoiceException("Audio conversion timed out.");
+            }
+            if (process.exitValue() != 0) {
+                throw new VoiceException("Audio conversion failed (ffmpeg exit code "
+                        + process.exitValue() + ").");
+            }
+            return Files.readAllBytes(wavFile);
+        } catch (IOException e) {
+            throw new VoiceException(
+                    "Could not convert ogg audio to wav. Is ffmpeg installed and on PATH?", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new VoiceException("Audio conversion was interrupted.", e);
+        } finally {
+            deleteQuietly(oggFile);
+            deleteQuietly(wavFile);
+        }
+    }
+
+    private void deleteQuietly(Path path) {
+        if (path == null) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(path);
+        } catch (IOException e) {
+            log.warn("Could not delete temp file {}", path, e);
         }
     }
 
