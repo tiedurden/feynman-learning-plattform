@@ -36,12 +36,13 @@ export interface EvaluationResult {
 export async function evaluateNotes(
   notebooks: Notebook[],
   pages: Page[],
-  notebookId?: string
+  notebookId?: string,
+  pageId?: string
 ): Promise<EvaluationResult> {
   const res = await fetch(`${API_BASE_URL}/api/evaluate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ notebooks, pages, notebookId })
+    body: JSON.stringify({ notebooks, pages, notebookId, pageId })
   })
 
   if (!res.ok) {

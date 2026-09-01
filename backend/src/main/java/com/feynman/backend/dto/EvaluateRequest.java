@@ -17,7 +17,8 @@ import java.util.List;
 public record EvaluateRequest(
         @NotNull List<NotebookDto> notebooks,
         @NotNull List<PageDto> pages,
-        String notebookId
+        String notebookId,
+        String pageId
 ) {
 }
 
