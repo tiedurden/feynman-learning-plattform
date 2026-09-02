@@ -8,6 +8,7 @@ import FormatMenu from './FormatMenu.vue'
 import ReferenceModal from './ReferenceModal.vue'
 import RefTooltip from './RefTooltip.vue'
 import LinkContextMenu from './LinkContextMenu.vue'
+import VoiceChat from './VoiceChat.vue'
 
 /** Matches LinkContextMenu's item shape (label + optional destructive + action). */
 interface LinkMenuItem {
@@ -418,6 +419,8 @@ function onDragUp() {
         </div>
         <p class="feedback-body">{{ feedback }}</p>
       </aside>
+
+      <VoiceChat :note-text="page.content" />
 
       <div
         ref="canvasRef"
