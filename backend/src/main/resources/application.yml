@@ -15,6 +15,7 @@ openai:
   # a -Dopenai.model=... JVM arg, or a profile-specific application-*.yml.
   model: ${OPENAI_MODEL:gpt-5.5}
   audio-model: ${OPENAI_AUDIO_MODEL:gpt-audio}
+  transcription-model: ${OPENAI_TRANSCRIPTION_MODEL:gpt-4o-mini-transcribe}
   # Base URL of the OpenAI-compatible chat completions API.
   base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
   # Explicitly choose deterministic mock scoring instead of OpenAI.

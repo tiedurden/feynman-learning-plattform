@@ -36,7 +36,7 @@ class VoiceChatServiceTest {
     private VoiceChatService service;
 
     private static final OpenAiProperties PROPS = new OpenAiProperties(
-            "sk-test", "gpt-audio", "gpt-audio", "https://api.openai.com/v1", false);
+            "sk-test", "gpt-audio", "gpt-audio", "gpt-4o-mini-transcribe", "https://api.openai.com/v1", false);
 
     private static final byte[] AUDIO = "fake-audio".getBytes(StandardCharsets.UTF_8);
 
@@ -51,6 +51,10 @@ class VoiceChatServiceTest {
                 }
               }]
             }
+            """;
+
+    private static final String TRANSCRIPTION_RESPONSE = """
+            { "text": "Napoleon was the king." }
             """;
 
     @BeforeEach
@@ -89,6 +93,14 @@ class VoiceChatServiceTest {
         VoiceChatResponse res = service.chat(AUDIO, "audio/wav", "notes about photosynthesis");
         assertEquals("Great explanation of photosynthesis.", res.transcript());
         assertEquals("dGVzdA==", res.audioData());
+    }
+
+    @Test
+    void successfulResponseMapsUserTranscript() {
+        // chat/completions and audio/transcriptions are called in that order
+        when(responseSpec.body(String.class)).thenReturn(VALID_RESPONSE, TRANSCRIPTION_RESPONSE);
+        VoiceChatResponse res = service.chat(AUDIO, "audio/wav", "notes");
+        assertEquals("Napoleon was the king.", res.userTranscript());
     }
 
     @Test

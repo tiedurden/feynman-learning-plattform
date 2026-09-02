@@ -15,6 +15,7 @@ public record OpenAiProperties(
         String apiKey,
         String model,
         String audioModel,
+        String transcriptionModel,
         String baseUrl,
         boolean mock
 ) {

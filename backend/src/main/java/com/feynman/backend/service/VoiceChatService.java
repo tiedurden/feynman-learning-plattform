@@ -6,7 +6,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -92,9 +94,10 @@ public class VoiceChatService {
             JsonNode audio = objectMapper.readTree(responseJson)
                     .path("choices").path(0).path("message").path("audio");
 
+            String userTranscript = transcribeAudio(audioBytes);
             String transcript = audio.path("transcript").asText("");
             String audioData  = audio.path("data").asText("");
-            return new VoiceChatResponse(transcript, audioData);
+            return new VoiceChatResponse(userTranscript, transcript, audioData);
 
         } catch (RestClientResponseException e) {
             String detail = OpenAiEvaluationService.openAiErrorDetail(
@@ -105,6 +108,32 @@ public class VoiceChatService {
             log.error("Voice chat failed. Cause: {}", e.getMessage());
             throw new VoiceException(
                     "Voice chat failed. Check OPENAI_API_KEY, audio-model, and network configuration.", e);
+        }
+    }
+
+    /** Separately transcribes the learner's own audio via OpenAI's speech-to-text endpoint. */
+    private String transcribeAudio(byte[] wavBytes) {
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("file", new ByteArrayResource(wavBytes) {
+            @Override
+            public String getFilename() {
+                return "audio.wav";
+            }
+        });
+        builder.part("model", properties.transcriptionModel());
+
+        String responseJson = openAiRestClient.post()
+                .uri("/audio/transcriptions")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(builder.build())
+                .retrieve()
+                .body(String.class);
+
+        try {
+            return objectMapper.readTree(responseJson).path("text").asText("");
+        } catch (Exception e) {
+            log.warn("Could not parse transcription response: {}", e.getMessage());
+            return "";
         }
     }
 
