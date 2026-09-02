@@ -47,9 +47,9 @@ public class VoiceChatService {
             default -> rawFormat;
         };
 
-        // gpt-audio rejects ogg outright, so transcode it to wav via ffmpeg first
-        if ("ogg".equals(audioFormat)) {
-            audioBytes = convertOggToWav(audioBytes);
+        // gpt-audio rejects ogg/webm outright (browser MediaRecorder output), so transcode via ffmpeg first
+        if ("ogg".equals(audioFormat) || "webm".equals(audioFormat)) {
+            audioBytes = convertToWav(audioBytes, audioFormat);
             audioFormat = "wav";
         }
 
@@ -108,17 +108,17 @@ public class VoiceChatService {
         }
     }
 
-    /** Shells out to the system {@code ffmpeg} binary to transcode Ogg/Vorbis audio to PCM WAV. */
-    private byte[] convertOggToWav(byte[] oggBytes) {
-        Path oggFile = null;
+    /** Shells out to the system {@code ffmpeg} binary to transcode ogg/webm audio to PCM WAV. */
+    private byte[] convertToWav(byte[] inputBytes, String sourceFormat) {
+        Path inputFile = null;
         Path wavFile = null;
         try {
-            oggFile = Files.createTempFile("voice-", ".ogg");
+            inputFile = Files.createTempFile("voice-", "." + sourceFormat);
             wavFile = Files.createTempFile("voice-", ".wav");
-            Files.write(oggFile, oggBytes);
+            Files.write(inputFile, inputBytes);
 
             Process process = new ProcessBuilder(
-                    "ffmpeg", "-y", "-i", oggFile.toString(),
+                    "ffmpeg", "-y", "-i", inputFile.toString(),
                     "-ar", "24000", "-ac", "1", wavFile.toString())
                     .redirectErrorStream(true)
                     .start();
@@ -134,12 +134,12 @@ public class VoiceChatService {
             return Files.readAllBytes(wavFile);
         } catch (IOException e) {
             throw new VoiceException(
-                    "Could not convert ogg audio to wav. Is ffmpeg installed and on PATH?", e);
+                    "Could not convert " + sourceFormat + " audio to wav. Is ffmpeg installed and on PATH?", e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new VoiceException("Audio conversion was interrupted.", e);
         } finally {
-            deleteQuietly(oggFile);
+            deleteQuietly(inputFile);
             deleteQuietly(wavFile);
         }
     }

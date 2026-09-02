@@ -67,7 +67,7 @@ class VoiceChatServiceTest {
     // --- format validation --------------------------------------------------
 
     @ParameterizedTest
-    @ValueSource(strings = {"audio/webm", "audio/ogg", "audio/aiff", "audio/flac"})
+    @ValueSource(strings = {"audio/aiff", "audio/flac"})
     void unsupportedFormatThrowsBeforeHttpCall(String mimeType) {
         // exception thrown before any RestClient call — no stub needed
         assertThrows(VoiceException.class,
