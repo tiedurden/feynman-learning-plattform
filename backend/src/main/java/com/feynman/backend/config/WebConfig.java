@@ -26,7 +26,7 @@ public class WebConfig implements WebMvcConfigurer {
                 // Use origin *patterns* so localhost / 127.0.0.1 (and any dev
                 // port) are matched flexibly instead of requiring an exact hit.
                 .allowedOriginPatterns(allowedOrigins)
-                .allowedMethods("GET", "POST", "OPTIONS")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
     }
