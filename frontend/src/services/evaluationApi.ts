@@ -1,12 +1,11 @@
 import type { Notebook, Page } from '@/types'
+import { apiJson } from './httpClient'
 
 /**
  * Client for the Feynman backend evaluation API.
  *
- * The base URL is configurable via `VITE_API_BASE_URL`; by default it is empty
- * so requests hit the Vite dev proxy (`/api → http://localhost:8080`).
+ * Requests are authenticated (bearer token) via {@link apiJson}.
  */
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 /** A single understanding score returned by the backend. */
 export interface Score {
@@ -39,17 +38,12 @@ export async function evaluateNotes(
   notebookId?: string,
   pageId?: string
 ): Promise<EvaluationResult> {
-  const res = await fetch(`${API_BASE_URL}/api/evaluate`, {
+  return apiJson<EvaluationResult>('/api/evaluate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ notebooks, pages, notebookId, pageId })
   })
-
-  if (!res.ok) {
-    throw new Error(`Evaluation request failed: ${res.status} ${res.statusText}`)
-  }
-
-  return (await res.json()) as EvaluationResult
 }
+
 
 

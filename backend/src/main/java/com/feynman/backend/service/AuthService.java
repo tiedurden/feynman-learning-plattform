@@ -2,6 +2,7 @@ package com.feynman.backend.service;
 
 import com.feynman.backend.dto.AuthResponse;
 import com.feynman.backend.dto.LoginRequest;
+import com.feynman.backend.dto.NotebookRequest;
 import com.feynman.backend.dto.RegisterRequest;
 import com.feynman.backend.entity.User;
 import com.feynman.backend.exception.EmailAlreadyInUseException;
@@ -20,11 +21,13 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final NotebookService notebookService;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService, NotebookService notebookService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.notebookService = notebookService;
     }
 
     @Transactional
@@ -35,6 +38,7 @@ public class AuthService {
         }
         User user = new User(email, passwordEncoder.encode(request.password()), request.displayName());
         userRepository.save(user);
+        notebookService.create(user.getId(), new NotebookRequest("Getting Started", "#7719aa"));
         return issueTokens(user);
     }
 

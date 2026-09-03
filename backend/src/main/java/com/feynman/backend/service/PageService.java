@@ -35,6 +35,14 @@ public class PageService {
         return pageRepository.findByNotebookId(notebook.getId()).stream().map(this::toResponse).toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<PageResponse> listAllForUser(UUID userId) {
+        return pageRepository.findAll().stream()
+                .filter(p -> p.getNotebook().getUser().getId().equals(userId))
+                .map(this::toResponse)
+                .toList();
+    }
+
     public PageResponse create(UUID userId, UUID notebookId, PageRequest request) {
         Notebook notebook = notebookService.getOwned(userId, notebookId);
         Page parent = resolveParent(notebook, request.parentId());
@@ -97,20 +105,61 @@ public class PageService {
         }
     }
 
-    /** Replaces the page's box list wholesale — simplest correct semantics for autosave. */
     private void applyBoxes(Page page, UUID userId, List<TextBoxPayload> boxPayloads) {
-        page.getBoxes().clear();
         if (boxPayloads == null) {
-            return;
+            boxPayloads = List.of();
         }
+        var incomingIds = boxPayloads.stream()
+                .map(TextBoxPayload::id)
+                .filter(id -> id != null && !id.isBlank())
+                .map(UUID::fromString)
+                .collect(java.util.stream.Collectors.toSet());
+        page.getBoxes().removeIf(box -> !incomingIds.contains(box.getId()));
+        var existingMap = page.getBoxes().stream()
+                .collect(java.util.stream.Collectors.toMap(TextBox::getId, b -> b));
         for (TextBoxPayload boxPayload : boxPayloads) {
-            TextBox box = new TextBox(page, boxPayload.x(), boxPayload.y(), boxPayload.text());
-            box.setWidth(boxPayload.width());
-            for (TextReferencePayload refPayload : TextReferencePayload.emptyIfNull(boxPayload.references())) {
-                Page targetPage = getOwned(userId, UUID.fromString(refPayload.targetPageId()));
-                box.getReferences().add(new TextReference(box, refPayload.start(), refPayload.end(), targetPage));
+            TextBox box;
+            if (boxPayload.id() != null && !boxPayload.id().isBlank()) {
+                UUID boxId = UUID.fromString(boxPayload.id());
+                box = existingMap.getOrDefault(boxId, new TextBox(page, boxPayload.x(), boxPayload.y(), boxPayload.text()));
+                box.setX(boxPayload.x());
+                box.setY(boxPayload.y());
+                box.setText(boxPayload.text());
+            } else {
+                box = new TextBox(page, boxPayload.x(), boxPayload.y(), boxPayload.text());
             }
-            page.getBoxes().add(box);
+            box.setWidth(boxPayload.width());
+            applyReferences(box, userId, TextReferencePayload.emptyIfNull(boxPayload.references()));
+            if (!page.getBoxes().contains(box)) {
+                page.getBoxes().add(box);
+            }
+        }
+    }
+
+    private void applyReferences(TextBox box, UUID userId, List<TextReferencePayload> refPayloads) {
+        var incomingIds = refPayloads.stream()
+                .map(TextReferencePayload::id)
+                .filter(id -> id != null && !id.isBlank())
+                .map(UUID::fromString)
+                .collect(java.util.stream.Collectors.toSet());
+        box.getReferences().removeIf(ref -> !incomingIds.contains(ref.getId()));
+        var existingMap = box.getReferences().stream()
+                .collect(java.util.stream.Collectors.toMap(TextReference::getId, r -> r));
+        for (TextReferencePayload refPayload : refPayloads) {
+            Page targetPage = getOwned(userId, UUID.fromString(refPayload.targetPageId()));
+            TextReference ref;
+            if (refPayload.id() != null && !refPayload.id().isBlank()) {
+                UUID refId = UUID.fromString(refPayload.id());
+                ref = existingMap.getOrDefault(refId, new TextReference(box, refPayload.start(), refPayload.end(), targetPage));
+                ref.setStartOffset(refPayload.start());
+                ref.setEndOffset(refPayload.end());
+                ref.setTargetPage(targetPage);
+            } else {
+                ref = new TextReference(box, refPayload.start(), refPayload.end(), targetPage);
+            }
+            if (!box.getReferences().contains(ref)) {
+                box.getReferences().add(ref);
+            }
         }
     }
 

@@ -28,6 +28,11 @@ public class PageController {
         this.pageService = pageService;
     }
 
+    @GetMapping("/pages")
+    public List<PageResponse> listAll(@AuthenticationPrincipal UserPrincipal principal) {
+        return pageService.listAllForUser(principal.getId());
+    }
+
     @GetMapping("/notebooks/{notebookId}/pages")
     public List<PageResponse> list(@AuthenticationPrincipal UserPrincipal principal, @PathVariable UUID notebookId) {
         return pageService.listForNotebook(principal.getId(), notebookId);

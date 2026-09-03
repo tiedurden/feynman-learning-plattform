@@ -3,6 +3,7 @@ import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useNotesStore } from '@/stores/notesStore'
 import { useProgressStore } from '@/stores/progressStore'
+import { useAuthStore } from '@/stores/authStore'
 import NotebookList from './NotebookList.vue'
 import PageTree from './PageTree.vue'
 import NoteEditor from './NoteEditor.vue'
@@ -14,6 +15,7 @@ const props = defineProps<{
 
 const store = useNotesStore()
 const progress = useProgressStore()
+const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -146,6 +148,11 @@ function evaluateAll() {
   store.setShowProgress(true)
   progress.evaluate()
 }
+
+function logout() {
+  auth.logout()
+  router.push({ name: 'login' })
+}
 </script>
 
 <template>
@@ -193,6 +200,9 @@ function evaluateAll() {
         >
           Evaluate All
         </button>
+
+        <span v-if="auth.email" class="user-email">{{ auth.email }}</span>
+        <button class="btn btn-secondary" @click="logout">Logout</button>
       </div>
     </header>
 
@@ -283,6 +293,15 @@ function evaluateAll() {
 .eval-status {
   color: #0a7c42;
   font-size: 13px;
+}
+
+.user-email {
+  color: #666;
+  font-size: 13px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .btn {
