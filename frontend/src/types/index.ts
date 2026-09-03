@@ -86,3 +86,12 @@ export interface NotebookTree {
   tree: PageNode[]
 }
 
+/** Response from POST /api/voice/chat — a spoken tutor reply to a recorded explanation. */
+export interface VoiceChatResponse {
+  /** What the learner said, transcribed separately from their recorded audio. */
+  userTranscript: string
+  transcript: string
+  /** Base64-encoded WAV audio. */
+  audioData: string
+}
+
