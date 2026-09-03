@@ -86,6 +86,39 @@ export interface NotebookTree {
   tree: PageNode[]
 }
 
+/** Request to create or update a notebook. */
+export interface NotebookRequest {
+  title: string
+  color: string
+}
+
+/** Request to create or update a page. */
+export interface PageRequest {
+  parentId?: string | null
+  title: string
+  content: string
+  order?: number
+  boxes?: TextBoxPayload[]
+}
+
+/** Payload for a TextBox in page save requests/responses. */
+export interface TextBoxPayload {
+  id?: string
+  x: number
+  y: number
+  width?: number
+  text: string
+  references?: TextReferencePayload[]
+}
+
+/** Payload for a TextReference in page save requests/responses. */
+export interface TextReferencePayload {
+  id?: string
+  start: number
+  end: number
+  targetPageId: string
+}
+
 /** Response from POST /api/voice/chat — a spoken tutor reply to a recorded explanation. */
 export interface VoiceChatResponse {
   /** What the learner said, transcribed separately from their recorded audio. */
