@@ -1,31 +1,13 @@
 import { defineStore } from 'pinia'
-import type { Notebook, NotebookTree, Page, PageNode, TextBox, TextReference } from '@/types'
-import { seedNotebooks, seedPages } from '@/data/seed'
+import type { Notebook, NotebookTree, Page, PageNode, TextBox, TextReference, NotebookRequest, PageRequest, TextBoxPayload, TextReferencePayload } from '@/types'
+import * as notebooksApi from '@/services/notebooksApi'
+import * as pagesApi from '@/services/pagesApi'
 import { sanitizeBoxHtml } from '@/utils/sanitizeHtml'
 
-const STORAGE_KEY = 'onenote-notes:v2'
 /** Separate key for lightweight UI preferences (progress toggle, etc.). */
 const UI_STORAGE_KEY = 'onenote-ui:v1'
 
-interface PersistShape {
-  notebooks: Notebook[]
-  pages: Page[]
-}
-
-/** Ensure every page has a boxes[] array (older persisted data may lack it). */
-function normalizePages(pages: Page[]): Page[] {
-  return pages.map((p) => ({
-    ...p,
-    boxes: Array.isArray(p.boxes)
-      ? p.boxes.map((b) => ({
-          ...b,
-          references: Array.isArray(b.references) ? b.references : []
-        }))
-      : []
-  }))
-}
-
-/** Load persisted UI preferences (best-effort). */
+/** Load the persisted "show progress" preference. */
 function loadShowProgress(): boolean {
   try {
     const raw = localStorage.getItem(UI_STORAGE_KEY)
@@ -45,7 +27,6 @@ function loadShowFeedback(): boolean {
     const raw = localStorage.getItem(UI_STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as { showFeedback?: boolean }
-      // Default to true so freshly evaluated feedback is visible out of the box.
       return parsed.showFeedback !== false
     }
   } catch {
@@ -54,44 +35,31 @@ function loadShowFeedback(): boolean {
   return true
 }
 
-function loadState(): PersistShape {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw) as PersistShape
-      if (Array.isArray(parsed.notebooks) && Array.isArray(parsed.pages)) {
-        return { notebooks: parsed.notebooks, pages: normalizePages(parsed.pages) }
-      }
-    }
-  } catch {
-    /* ignore malformed storage */
-  }
-  // Fallback to fresh seed data (deep-cloned so we never mutate the source).
-  return {
-    notebooks: structuredClone(seedNotebooks),
-    pages: normalizePages(structuredClone(seedPages))
-  }
-}
-
-function uid(prefix: string): string {
-  return `${prefix}-${Math.random().toString(36).slice(2, 9)}`
-}
-
 interface State {
+  // Data
   notebooks: Notebook[]
   pages: Page[]
-  /** Global toggle: show completion progress badges across all sidebars. */
+
+  // Server sync state
+  loading: boolean
+  loaded: boolean
+  saving: boolean
+  error: string | null
+
+  // UI preferences
   showProgress: boolean
-  /** Page toggle: show the model's feedback callout inside the editor. */
   showFeedback: boolean
 }
 
 export const useNotesStore = defineStore('notes', {
   state: (): State => {
-    const { notebooks, pages } = loadState()
     return {
-      notebooks,
-      pages,
+      notebooks: [],
+      pages: [],
+      loading: false,
+      loaded: false,
+      saving: false,
+      error: null,
       showProgress: loadShowProgress(),
       showFeedback: loadShowFeedback()
     }
@@ -179,18 +147,101 @@ export const useNotesStore = defineStore('notes', {
   },
 
   actions: {
-    persist() {
+    // --- Server sync -------------------------------------------------------
+    /**
+     * Load all notebooks and pages from the backend.
+     * Called on app mount after auth is confirmed.
+     */
+    async loadFromServer() {
+      this.loading = true
+      this.error = null
       try {
-        localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({ notebooks: this.notebooks, pages: this.pages })
-        )
-      } catch {
-        /* storage might be unavailable — non-fatal */
+        const [notebooks, pages] = await Promise.all([
+          notebooksApi.listNotebooks(),
+          pagesApi.listAllPages()
+        ])
+        this.notebooks = notebooks
+        this.pages = pages
+        this.loaded = true
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to load notebooks and pages'
+        this.loaded = false
+      } finally {
+        this.loading = false
       }
     },
 
-    // --- UI preferences ------------------------------------------------------
+    /**
+     * Save a single page to the server.
+     * Builds the full page payload (title, content, boxes with references) and PUTs it.
+     */
+    async savePage(pageId: string) {
+      const page = this.pages.find((p) => p.id === pageId)
+      if (!page) return
+
+      this.saving = true
+      this.error = null
+      try {
+        const payload: PageRequest = {
+          parentId: page.parentId,
+          title: page.title,
+          content: page.content,
+          order: page.order,
+          boxes: page.boxes?.map((box) => ({
+            id: box.id,
+            x: box.x,
+            y: box.y,
+            width: box.width,
+            text: box.text,
+            references: box.references?.map((ref) => ({
+              id: ref.id,
+              start: ref.start,
+              end: ref.end,
+              targetPageId: ref.targetPageId
+            })) as TextReferencePayload[]
+          })) as TextBoxPayload[]
+        }
+        const updated = await pagesApi.updatePage(pageId, payload)
+        // Reconcile: replace local page with server response
+        const idx = this.pages.findIndex((p) => p.id === pageId)
+        if (idx >= 0) {
+          this.pages[idx] = updated
+        }
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to save page'
+      } finally {
+        this.saving = false
+      }
+    },
+
+    /**
+     * Save a single notebook (title/color) to the server.
+     */
+    async saveNotebook(notebookId: string) {
+      const notebook = this.notebooks.find((n) => n.id === notebookId)
+      if (!notebook) return
+
+      this.saving = true
+      this.error = null
+      try {
+        const payload: NotebookRequest = {
+          title: notebook.title,
+          color: notebook.color
+        }
+        const updated = await notebooksApi.updateNotebook(notebookId, payload)
+        // Reconcile: replace local notebook with server response
+        const idx = this.notebooks.findIndex((n) => n.id === notebookId)
+        if (idx >= 0) {
+          this.notebooks[idx] = updated
+        }
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to save notebook'
+      } finally {
+        this.saving = false
+      }
+    },
+
+    // --- UI preferences -------------------------------------------------------
     /** Persist all lightweight UI preferences together (best-effort). */
     persistUiPrefs() {
       try {
@@ -219,74 +270,161 @@ export const useNotesStore = defineStore('notes', {
     },
 
     // --- Notebook CRUD -------------------------------------------------------
-    addNotebook(title = 'New Notebook', color = '#7719aa'): Notebook {
-      const notebook: Notebook = { id: uid('nb'), title, color }
-      this.notebooks.push(notebook)
-      this.persist()
-      return notebook
+    /**
+     * Create a new notebook on the server.
+     * Returns the created notebook with server-assigned id.
+     */
+    async addNotebook(title = 'New Notebook', color = '#7719aa'): Promise<Notebook> {
+      this.saving = true
+      this.error = null
+      try {
+        const notebook = await notebooksApi.createNotebook({ title, color })
+        this.notebooks.push(notebook)
+        return notebook
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to create notebook'
+        throw err
+      } finally {
+        this.saving = false
+      }
     },
 
+    /**
+     * Rename a notebook locally (local mutation only).
+     * Must be followed by saveNotebook() to persist to the server.
+     */
     renameNotebook(id: string, title: string) {
       const nb = this.notebooks.find((n) => n.id === id)
       if (nb) {
         nb.title = title
-        this.persist()
       }
     },
 
-    deleteNotebook(id: string) {
-      this.notebooks = this.notebooks.filter((n) => n.id !== id)
-      this.pages = this.pages.filter((p) => p.notebookId !== id)
-      this.persist()
+    /**
+     * Delete a notebook and all its pages on the server.
+     */
+    async deleteNotebook(id: string): Promise<void> {
+      this.saving = true
+      this.error = null
+      try {
+        await notebooksApi.deleteNotebook(id)
+        this.notebooks = this.notebooks.filter((n) => n.id !== id)
+        this.pages = this.pages.filter((p) => p.notebookId !== id)
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to delete notebook'
+        throw err
+      } finally {
+        this.saving = false
+      }
     },
 
     // --- Page CRUD -----------------------------------------------------------
-    addPage(notebookId: string, parentId: string | null = null, title = 'Untitled Page'): Page {
-      const siblings = this.pages.filter(
-        (p) => p.notebookId === notebookId && p.parentId === parentId
-      )
-      const order = siblings.length
-        ? Math.max(...siblings.map((s) => s.order)) + 1
-        : 0
-      const page: Page = {
-        id: uid('pg'),
-        notebookId,
-        parentId,
-        title,
-        content: '',
-        boxes: [],
-        order
+    /**
+     * Create a new page on the server.
+     * Returns the created page with server-assigned id.
+     */
+    async addPage(notebookId: string, parentId: string | null = null, title = 'Untitled Page'): Promise<Page> {
+      this.saving = true
+      this.error = null
+      try {
+        const page = await pagesApi.createPage(notebookId, {
+          parentId,
+          title,
+          content: '',
+          boxes: []
+        })
+        this.pages.push(page)
+        return page
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to create page'
+        throw err
+      } finally {
+        this.saving = false
       }
-      this.pages.push(page)
-      this.persist()
-      return page
     },
 
+    /**
+     * Update page title/content locally (local mutation only).
+     * Must be followed by savePage() to persist to the server.
+     */
     updatePage(id: string, patch: Partial<Pick<Page, 'title' | 'content'>>) {
       const page = this.pages.find((p) => p.id === id)
       if (page) {
         Object.assign(page, patch)
-        this.persist()
+      }
+    },
+
+    /**
+     * Delete a page (and all descendants) on the server.
+     */
+    async deletePage(id: string): Promise<void> {
+      this.saving = true
+      this.error = null
+      try {
+        await pagesApi.deletePage(id)
+        // Remove the deleted page and all descendants locally
+        const toRemove = new Set<string>([id])
+        let changed = true
+        while (changed) {
+          changed = false
+          for (const p of this.pages) {
+            if (p.parentId && toRemove.has(p.parentId) && !toRemove.has(p.id)) {
+              toRemove.add(p.id)
+              changed = true
+            }
+          }
+        }
+        this.pages = this.pages.filter((p) => !toRemove.has(p.id))
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to delete page'
+        throw err
+      } finally {
+        this.saving = false
+      }
+    },
+
+    /**
+     * Re-parent a page locally (local mutation only).
+     * Must be followed by savePage() to persist to the server.
+     * Guards against cycles.
+     */
+    movePage(id: string, newParentId: string | null) {
+      if (id === newParentId) return
+      // Prevent moving a page under one of its own descendants.
+      let cursor = newParentId
+      while (cursor) {
+        if (cursor === id) return
+        cursor = this.pages.find((p) => p.id === cursor)?.parentId ?? null
+      }
+      const page = this.pages.find((p) => p.id === id)
+      if (page) {
+        page.parentId = newParentId
       }
     },
 
     // --- Text box CRUD -------------------------------------------------------
-    /** Persist a new (non-empty) text box onto a page. */
+    /**
+     * Add a new text box to a page (local mutation only).
+     * Must be followed by savePage() to persist to the server.
+     */
     addTextBox(pageId: string, box: Omit<TextBox, 'id'>): TextBox | undefined {
       const page = this.pages.find((p) => p.id === pageId)
       if (!page) return
       if (!page.boxes) page.boxes = []
       const tb: TextBox = {
-        id: uid('tb'),
+        id: crypto.randomUUID(),
         references: [],
         ...box,
         text: sanitizeBoxHtml(box.text ?? '')
       }
       page.boxes.push(tb)
-      this.persist()
       return tb
     },
 
+    /**
+     * Update a text box (local mutation only).
+     * Must be followed by savePage() to persist to the server.
+     */
     updateTextBox(
       pageId: string,
       boxId: string,
@@ -295,7 +433,7 @@ export const useNotesStore = defineStore('notes', {
       const page = this.pages.find((p) => p.id === pageId)
       const box = page?.boxes?.find((b) => b.id === boxId)
       if (box) {
-        // Sanitize incoming rich-text before it is stored/persisted.
+        // Sanitize incoming rich-text before it is stored.
         const cleanPatch =
           patch.text !== undefined
             ? { ...patch, text: sanitizeBoxHtml(patch.text) }
@@ -315,14 +453,13 @@ export const useNotesStore = defineStore('notes', {
           })
         }
         Object.assign(box, cleanPatch)
-        this.persist()
       }
     },
 
     /**
-     * Add an inline page reference to a box. Optionally replaces the marked
-     * range with `linkText` first (the modal lets the user edit the wording),
-     * then records the reference over the resulting range.
+     * Add an inline page reference to a box (local mutation only).
+     * Optionally replaces the marked range with `linkText` first.
+     * Must be followed by savePage() to persist to the server.
      */
     addBoxReference(
       pageId: string,
@@ -354,7 +491,7 @@ export const useNotesStore = defineStore('notes', {
       }
 
       const reference: TextReference = {
-        id: uid('ref'),
+        id: crypto.randomUUID(),
         start,
         end,
         targetPageId: params.targetPageId
@@ -365,24 +502,25 @@ export const useNotesStore = defineStore('notes', {
       )
       box.references.push(reference)
       box.references.sort((a, b) => a.start - b.start)
-      this.persist()
       return reference
     },
 
-    /** Remove a single inline reference from a box. */
+    /**
+     * Remove an inline reference from a box (local mutation only).
+     * Must be followed by savePage() to persist to the server.
+     */
     removeBoxReference(pageId: string, boxId: string, referenceId: string) {
       const page = this.pages.find((p) => p.id === pageId)
       const box = page?.boxes?.find((b) => b.id === boxId)
       if (box?.references) {
         box.references = box.references.filter((r) => r.id !== referenceId)
-        this.persist()
       }
     },
 
     /**
-     * Update an existing inline reference: optionally rewrite its linked text
-     * (adjusting its own end offset and shifting later references) and/or point
-     * it at a different page.
+     * Update an inline reference (local mutation only).
+     * Optionally rewrite its linked text and/or target page.
+     * Must be followed by savePage() to persist to the server.
      */
     updateBoxReference(
       pageId: string,
@@ -416,55 +554,17 @@ export const useNotesStore = defineStore('notes', {
       }
 
       box.references!.sort((a, b) => a.start - b.start)
-      this.persist()
     },
 
-    /** Remove a text box (used when it is emptied out). */
+    /**
+     * Remove a text box (local mutation only).
+     * Must be followed by savePage() to persist to the server.
+     */
     removeTextBox(pageId: string, boxId: string) {
       const page = this.pages.find((p) => p.id === pageId)
       if (page?.boxes) {
         page.boxes = page.boxes.filter((b) => b.id !== boxId)
-        this.persist()
       }
-    },
-
-    /** Delete a page and all of its descendants. */
-    deletePage(id: string) {
-      const toRemove = new Set<string>([id])
-      let changed = true
-      while (changed) {
-        changed = false
-        for (const p of this.pages) {
-          if (p.parentId && toRemove.has(p.parentId) && !toRemove.has(p.id)) {
-            toRemove.add(p.id)
-            changed = true
-          }
-        }
-      }
-      this.pages = this.pages.filter((p) => !toRemove.has(p.id))
-      this.persist()
-    },
-
-    /** Re-parent a page (e.g. drag & drop). Guards against cycles. */
-    movePage(id: string, newParentId: string | null) {
-      if (id === newParentId) return
-      // Prevent moving a page under one of its own descendants.
-      let cursor = newParentId
-      while (cursor) {
-        if (cursor === id) return
-        cursor = this.pages.find((p) => p.id === cursor)?.parentId ?? null
-      }
-      const page = this.pages.find((p) => p.id === id)
-      if (page) {
-        page.parentId = newParentId
-        this.persist()
-      }
-    },
-
-    resetToSeed() {
-      this.notebooks = structuredClone(seedNotebooks)
-      this.pages = normalizePages(structuredClone(seedPages))
-      this.persist()
     }
   }
 })
