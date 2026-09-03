@@ -76,44 +76,64 @@ function selectPage(pageId: string) {
   })
 }
 
-function addNotebook() {
-  const nb = store.addNotebook()
-  selectNotebook(nb.id)
+async function addNotebook() {
+  try {
+    const nb = await store.addNotebook()
+    selectNotebook(nb.id)
+  } catch (err) {
+    console.error('Failed to add notebook:', err)
+  }
 }
 
 function renameNotebook(notebookId: string, title: string) {
   store.renameNotebook(notebookId, title)
 }
 
-function deleteNotebook(notebookId: string) {
+async function deleteNotebook(notebookId: string) {
   const wasActive = activeNotebookId.value === notebookId
-  store.deleteNotebook(notebookId)
-  if (wasActive) {
-    const next = store.notebooks[0]
-    if (next) {
-      router.replace({ name: 'notebook', params: { id: next.id } })
-    } else {
-      router.replace({ name: 'home' })
+  try {
+    await store.deleteNotebook(notebookId)
+    if (wasActive) {
+      const next = store.notebooks[0]
+      if (next) {
+        router.replace({ name: 'notebook', params: { id: next.id } })
+      } else {
+        router.replace({ name: 'home' })
+      }
     }
+  } catch (err) {
+    console.error('Failed to delete notebook:', err)
   }
 }
 
-function addRootPage() {
+async function addRootPage() {
   if (!activeNotebookId.value) return
-  const page = store.addPage(activeNotebookId.value, null)
-  selectPage(page.id)
+  try {
+    const page = await store.addPage(activeNotebookId.value, null)
+    selectPage(page.id)
+  } catch (err) {
+    console.error('Failed to add page:', err)
+  }
 }
 
-function addChildPage(parentId: string) {
+async function addChildPage(parentId: string) {
   if (!activeNotebookId.value) return
-  const page = store.addPage(activeNotebookId.value, parentId)
-  selectPage(page.id)
+  try {
+    const page = await store.addPage(activeNotebookId.value, parentId)
+    selectPage(page.id)
+  } catch (err) {
+    console.error('Failed to add page:', err)
+  }
 }
 
-function deletePage(pageId: string) {
-  store.deletePage(pageId)
-  if (activePageId.value === pageId && activeNotebookId.value) {
-    router.replace({ name: 'notebook', params: { id: activeNotebookId.value } })
+async function deletePage(pageId: string) {
+  try {
+    await store.deletePage(pageId)
+    if (activePageId.value === pageId && activeNotebookId.value) {
+      router.replace({ name: 'notebook', params: { id: activeNotebookId.value } })
+    }
+  } catch (err) {
+    console.error('Failed to delete page:', err)
   }
 }
 
@@ -148,6 +168,29 @@ function evaluateAll() {
   store.setShowProgress(true)
   progress.evaluate()
 }
+
+/**
+ * Flush the currently active page to the server (manual save).
+ */
+async function saveCurrentPage() {
+  if (activePageId.value) {
+    await store.savePage(activePageId.value).catch((err) => {
+      console.error('Failed to save page:', err)
+    })
+  }
+}
+
+// Flush active page when navigating away (route-leave safety net)
+watch(
+  activePageId,
+  (newId, oldId) => {
+    if (oldId && newId !== oldId) {
+      store.savePage(oldId).catch(() => {
+        /* non-fatal */
+      })
+    }
+  }
+)
 
 function logout() {
   auth.logout()
@@ -199,6 +242,14 @@ function logout() {
           @click="evaluateAll"
         >
           Evaluate All
+        </button>
+
+        <button
+          class="btn btn-secondary"
+          :disabled="!activePage || store.saving"
+          @click="saveCurrentPage"
+        >
+          {{ store.saving ? 'Saving…' : 'Save' }}
         </button>
 
         <span v-if="auth.email" class="user-email">{{ auth.email }}</span>
