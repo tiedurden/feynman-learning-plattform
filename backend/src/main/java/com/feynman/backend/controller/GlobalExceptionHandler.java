@@ -1,5 +1,8 @@
 package com.feynman.backend.controller;
 
+import com.feynman.backend.exception.EmailAlreadyInUseException;
+import com.feynman.backend.exception.InvalidCredentialsException;
+import com.feynman.backend.exception.ResourceNotFoundException;
 import com.feynman.backend.service.OpenAiEvaluationService.EvaluationException;
 import com.feynman.backend.service.VoiceChatService.VoiceException;
 import org.slf4j.Logger;
@@ -26,6 +29,38 @@ public class GlobalExceptionHandler {
                 .findFirst()
                 .map(err -> err.getDefaultMessage())
                 .orElse("Validation failed"));
+        return pd;
+    }
+
+    @ExceptionHandler(EmailAlreadyInUseException.class)
+    public ProblemDetail handleEmailInUse(EmailAlreadyInUseException ex) {
+        ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        pd.setTitle("Email already in use");
+        pd.setDetail(ex.getMessage());
+        return pd;
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ProblemDetail handleInvalidCredentials(InvalidCredentialsException ex) {
+        ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED);
+        pd.setTitle("Invalid credentials");
+        pd.setDetail(ex.getMessage());
+        return pd;
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ProblemDetail handleNotFound(ResourceNotFoundException ex) {
+        ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        pd.setTitle("Not found");
+        pd.setDetail(ex.getMessage());
+        return pd;
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
+        ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        pd.setTitle("Invalid request");
+        pd.setDetail(ex.getMessage());
         return pd;
     }
 
