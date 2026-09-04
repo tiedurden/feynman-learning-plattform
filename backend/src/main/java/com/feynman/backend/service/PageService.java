@@ -124,6 +124,10 @@ public class PageService {
                 try {
                     UUID boxId = UUID.fromString(boxPayload.id());
                     box = existingMap.getOrDefault(boxId, new TextBox(page, boxPayload.x(), boxPayload.y(), boxPayload.text()));
+                    // Ensure the box has the correct ID (matters for newly created boxes)
+                    if (box.getId() == null) {
+                        box.setId(boxId);
+                    }
                     box.setX(boxPayload.x());
                     box.setY(boxPayload.y());
                     box.setText(boxPayload.text());
@@ -165,6 +169,10 @@ public class PageService {
                 if (refPayload.id() != null && !refPayload.id().isBlank()) {
                     UUID refId = UUID.fromString(refPayload.id());
                     ref = existingMap.getOrDefault(refId, new TextReference(box, refPayload.start(), refPayload.end(), targetPage));
+                    // Ensure the reference has the correct ID (matters for newly created references)
+                    if (ref.getId() == null) {
+                        ref.setId(refId);
+                    }
                     ref.setStartOffset(refPayload.start());
                     ref.setEndOffset(refPayload.end());
                     ref.setTargetPage(targetPage);

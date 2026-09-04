@@ -344,14 +344,15 @@ function onSavedText(box: TextBox, value: string) {
 }
 
 function onSavedBlur(box: TextBox) {
+  if (!props.page) return
   // Emptying an existing box deletes it (OneNote behaviour).
-  if (props.page && isBlank(box.text)) {
+  if (isBlank(box.text)) {
     store.removeTextBox(props.page.id, box.id)
-    // Save to server after removing
-    store.savePage(props.page.id).catch(() => {
-      /* non-fatal */
-    })
   }
+  // Always save after blur (whether deleted or just edited)
+  store.savePage(props.page.id).catch(() => {
+    /* non-fatal */
+  })
 }
 
 

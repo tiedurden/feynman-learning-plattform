@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
 import { useNotesStore } from '@/stores/notesStore'
 
@@ -7,9 +7,8 @@ const authStore = useAuthStore()
 const notesStore = useNotesStore()
 const loadingData = ref(true)
 
-onMounted(async () => {
-  // If authenticated, load data from server
-  if (authStore.isAuthenticated) {
+async function loadData() {
+  if (authStore.isAuthenticated && !notesStore.loaded) {
     try {
       await notesStore.loadFromServer()
     } catch (err) {
@@ -17,6 +16,19 @@ onMounted(async () => {
     }
   }
   loadingData.value = false
+}
+
+onMounted(() => {
+  // Watch for auth state changes and load when authenticated
+  watch(
+    () => authStore.isAuthenticated,
+    (isAuth) => {
+      if (isAuth) {
+        loadData()
+      }
+    },
+    { immediate: true }
+  )
 
   // Best-effort flush on tab close (keepalive skips service worker)
   window.addEventListener('beforeunload', () => {

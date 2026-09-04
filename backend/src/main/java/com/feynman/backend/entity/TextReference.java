@@ -50,6 +50,10 @@ public class TextReference {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
     public TextBox getTextBox() {
         return textBox;
     }
