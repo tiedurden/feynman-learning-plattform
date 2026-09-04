@@ -118,13 +118,19 @@ public class PageService {
         var existingMap = page.getBoxes().stream()
                 .collect(java.util.stream.Collectors.toMap(TextBox::getId, b -> b));
         for (TextBoxPayload boxPayload : boxPayloads) {
+            if (boxPayload == null) continue;
             TextBox box;
             if (boxPayload.id() != null && !boxPayload.id().isBlank()) {
-                UUID boxId = UUID.fromString(boxPayload.id());
-                box = existingMap.getOrDefault(boxId, new TextBox(page, boxPayload.x(), boxPayload.y(), boxPayload.text()));
-                box.setX(boxPayload.x());
-                box.setY(boxPayload.y());
-                box.setText(boxPayload.text());
+                try {
+                    UUID boxId = UUID.fromString(boxPayload.id());
+                    box = existingMap.getOrDefault(boxId, new TextBox(page, boxPayload.x(), boxPayload.y(), boxPayload.text()));
+                    box.setX(boxPayload.x());
+                    box.setY(boxPayload.y());
+                    box.setText(boxPayload.text());
+                } catch (IllegalArgumentException e) {
+                    // Invalid UUID, skip
+                    continue;
+                }
             } else {
                 box = new TextBox(page, boxPayload.x(), boxPayload.y(), boxPayload.text());
             }
@@ -137,6 +143,10 @@ public class PageService {
     }
 
     private void applyReferences(TextBox box, UUID userId, List<TextReferencePayload> refPayloads) {
+        if (refPayloads == null || refPayloads.isEmpty()) {
+            box.getReferences().clear();
+            return;
+        }
         var incomingIds = refPayloads.stream()
                 .map(TextReferencePayload::id)
                 .filter(id -> id != null && !id.isBlank())
@@ -146,19 +156,27 @@ public class PageService {
         var existingMap = box.getReferences().stream()
                 .collect(java.util.stream.Collectors.toMap(TextReference::getId, r -> r));
         for (TextReferencePayload refPayload : refPayloads) {
-            Page targetPage = getOwned(userId, UUID.fromString(refPayload.targetPageId()));
-            TextReference ref;
-            if (refPayload.id() != null && !refPayload.id().isBlank()) {
-                UUID refId = UUID.fromString(refPayload.id());
-                ref = existingMap.getOrDefault(refId, new TextReference(box, refPayload.start(), refPayload.end(), targetPage));
-                ref.setStartOffset(refPayload.start());
-                ref.setEndOffset(refPayload.end());
-                ref.setTargetPage(targetPage);
-            } else {
-                ref = new TextReference(box, refPayload.start(), refPayload.end(), targetPage);
+            if (refPayload.targetPageId() == null || refPayload.targetPageId().isBlank()) {
+                continue; // skip invalid references
             }
-            if (!box.getReferences().contains(ref)) {
-                box.getReferences().add(ref);
+            try {
+                Page targetPage = getOwned(userId, UUID.fromString(refPayload.targetPageId()));
+                TextReference ref;
+                if (refPayload.id() != null && !refPayload.id().isBlank()) {
+                    UUID refId = UUID.fromString(refPayload.id());
+                    ref = existingMap.getOrDefault(refId, new TextReference(box, refPayload.start(), refPayload.end(), targetPage));
+                    ref.setStartOffset(refPayload.start());
+                    ref.setEndOffset(refPayload.end());
+                    ref.setTargetPage(targetPage);
+                } else {
+                    ref = new TextReference(box, refPayload.start(), refPayload.end(), targetPage);
+                }
+                if (!box.getReferences().contains(ref)) {
+                    box.getReferences().add(ref);
+                }
+            } catch (Exception e) {
+                // Log but don't crash on individual reference failures
+                System.err.println("Failed to apply reference: " + e.getMessage());
             }
         }
     }
