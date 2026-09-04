@@ -29,13 +29,13 @@ public class TextBox {
     private Page page;
 
     @Column(nullable = false)
-    private int x;
+    private double x;
 
     @Column(nullable = false)
-    private int y;
+    private double y;
 
     /** Optional authored width in px (auto if null). */
-    private Integer width;
+    private Double width;
 
     @Column(columnDefinition = "TEXT")
     private String text;
@@ -47,7 +47,7 @@ public class TextBox {
         // JPA
     }
 
-    public TextBox(Page page, int x, int y, String text) {
+    public TextBox(Page page, double x, double y, String text) {
         this.page = page;
         this.x = x;
         this.y = y;
@@ -62,27 +62,27 @@ public class TextBox {
         return page;
     }
 
-    public int getX() {
+    public double getX() {
         return x;
     }
 
-    public void setX(int x) {
+    public void setX(double x) {
         this.x = x;
     }
 
-    public int getY() {
+    public double getY() {
         return y;
     }
 
-    public void setY(int y) {
+    public void setY(double y) {
         this.y = y;
     }
 
-    public Integer getWidth() {
+    public Double getWidth() {
         return width;
     }
 
-    public void setWidth(Integer width) {
+    public void setWidth(Double width) {
         this.width = width;
     }
 

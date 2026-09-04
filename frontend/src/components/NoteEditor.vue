@@ -328,6 +328,10 @@ function onDraftBlur(draft: DraftBox) {
   if (props.page && !isBlank(draft.text)) {
     // Promote the draft into a persisted box.
     store.addTextBox(props.page.id, { x: draft.x, y: draft.y, text: draft.text })
+    // Save to server after adding
+    store.savePage(props.page.id).catch(() => {
+      /* non-fatal: error already set in store */
+    })
   }
   // Either way the local draft goes away (persisted one re-renders from store).
   drafts.value = drafts.value.filter((d) => d.id !== draft.id)
@@ -340,10 +344,15 @@ function onSavedText(box: TextBox, value: string) {
 }
 
 function onSavedBlur(box: TextBox) {
+  if (!props.page) return
   // Emptying an existing box deletes it (OneNote behaviour).
-  if (props.page && isBlank(box.text)) {
+  if (isBlank(box.text)) {
     store.removeTextBox(props.page.id, box.id)
   }
+  // Always save after blur (whether deleted or just edited)
+  store.savePage(props.page.id).catch(() => {
+    /* non-fatal */
+  })
 }
 
 
@@ -377,9 +386,27 @@ function onDragMove(e: MouseEvent) {
 }
 
 function onDragUp() {
+  if (props.page) {
+    // Save to server after drag ends
+    store.savePage(props.page.id).catch(() => {
+      /* non-fatal */
+    })
+  }
   drag = null
   window.removeEventListener('mousemove', onDragMove)
   window.removeEventListener('mouseup', onDragUp)
+}
+
+/**
+ * Save the page title when the input blurs or user presses Enter.
+ */
+async function saveTitleChange() {
+  if (props.page) {
+    store.updatePage(props.page.id, { title })
+    await store.savePage(props.page.id).catch(() => {
+      /* non-fatal */
+    })
+  }
 }
 </script>
 
@@ -391,6 +418,8 @@ function onDragUp() {
         v-model="title"
         placeholder="Untitled Page"
         spellcheck="false"
+        @blur="saveTitleChange"
+        @keydown.enter="saveTitleChange"
       />
       <div class="meta">
         <span>Click anywhere below to add a text box</span>

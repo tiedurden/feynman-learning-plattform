@@ -2,6 +2,7 @@
 import { computed, nextTick, ref } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import type { Notebook } from '@/types'
+import { useNotesStore } from '@/stores/notesStore'
 import ConfirmDialog from './ConfirmDialog.vue'
 import ProgressBadge from './ProgressBadge.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
@@ -11,6 +12,8 @@ const props = defineProps<{
   notebooks: Notebook[]
   activeId?: string
 }>()
+
+const store = useNotesStore()
 
 // --- Progress display toggle ----------------------------------------------
 const showProgress = ref(false)
@@ -42,11 +45,18 @@ async function startRename(nb: Notebook) {
   inputEl.value?.select()
 }
 
-function commitRename(nb: Notebook) {
+async function commitRename(nb: Notebook) {
   if (editingId.value !== nb.id) return
   const next = draftTitle.value.trim()
   // Ignore blank input — keep the previous title.
-  if (next && next !== nb.title) emit('rename', nb.id, next)
+  if (next && next !== nb.title) {
+    emit('rename', nb.id, next)
+    // Also save to server
+    store.renameNotebook(nb.id, next)
+    await store.saveNotebook(nb.id).catch(() => {
+      /* non-fatal */
+    })
+  }
   editingId.value = null
 }
 
