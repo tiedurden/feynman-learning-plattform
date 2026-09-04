@@ -6,6 +6,8 @@ import com.feynman.backend.dto.EvaluationResponse;
 import com.feynman.backend.dto.NotebookDto;
 import com.feynman.backend.dto.PageDto;
 import com.feynman.backend.dto.ScoreDto;
+import com.feynman.backend.entity.Notebook;
+import com.feynman.backend.repository.NotebookRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -17,9 +19,12 @@ import org.springframework.web.client.RestClientResponseException;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Evaluates a user's notebooks/pages and scores how well each topic seems to
@@ -37,11 +42,14 @@ public class OpenAiEvaluationService {
 
     private final RestClient openAiRestClient;
     private final OpenAiProperties properties;
+    private final NotebookRepository notebookRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public OpenAiEvaluationService(RestClient openAiRestClient, OpenAiProperties properties) {
+    public OpenAiEvaluationService(
+            RestClient openAiRestClient, OpenAiProperties properties, NotebookRepository notebookRepository) {
         this.openAiRestClient = openAiRestClient;
         this.properties = properties;
+        this.notebookRepository = notebookRepository;
         // Startup diagnostic: confirms what Spring actually bound WITHOUT leaking
         // the secret. If keyPresent=false here, the env var never reached this
         // JVM process (wrong run config, not restarted, or set in another shell).
@@ -60,8 +68,12 @@ public class OpenAiEvaluationService {
      * pages are evaluated. When {@code request.pageId()} is set, only that
      * single page is scored and notebook aggregation is skipped — this keeps
      * the request cheap for notebooks with many pages/subpages.
+     *
+     * @param userId the authenticated caller — PDF context is only attached
+     *               for notebooks this user actually owns, so one user can
+     *               never pull another user's uploaded PDF into their prompt.
      */
-    public EvaluationResponse evaluate(EvaluateRequest request) {
+    public EvaluationResponse evaluate(UUID userId, EvaluateRequest request) {
         String filterId = request.notebookId();
         String pageId = request.pageId();
         boolean singlePage = pageId != null && !pageId.isBlank();
@@ -89,12 +101,20 @@ public class OpenAiEvaluationService {
                     "OPENAI_API_KEY is missing. Set it or enable openai.mock=true for offline scoring.");
         }
 
+        // Mock scoring is a fully offline heuristic — never touches the DB, so
+        // this stays empty (and safe) in that mode and in tests.
+        Map<String, String> pdfTextByNotebookId = properties.useMock()
+                ? Map.of()
+                : loadPdfTextByNotebookId(userId, pages);
+
         Map<String, ScoreDto> pageScores = new LinkedHashMap<>();
 
         // --- Per-page scoring ---------------------------------------------------
         Map<String, Integer> pageScoresById = new LinkedHashMap<>();
         for (PageDto page : pages) {
-            ScoreDto score = properties.useMock() ? mockScore(page) : llmScore(page);
+            ScoreDto score = properties.useMock()
+                    ? mockScore(page)
+                    : llmScore(page, pdfTextByNotebookId.get(page.notebookId()));
             pageScores.put(page.id(), score);
             pageScoresById.put(page.id(), score.score());
         }
@@ -170,7 +190,37 @@ public class OpenAiEvaluationService {
     // OpenAI-backed scoring
     // ---------------------------------------------------------------------------
 
-    private ScoreDto llmScore(PageDto page) {
+    /**
+     * Looks up each distinct notebook referenced by {@code pages} exactly once
+     * and returns its cached PDF text, keyed by notebook id. Notebooks that
+     * don't belong to {@code userId}, don't exist, or have no PDF are simply
+     * absent from the result — this is the ownership boundary that stops one
+     * user's uploaded PDF from ever being injected into another user's prompt.
+     */
+    private Map<String, String> loadPdfTextByNotebookId(UUID userId, List<PageDto> pages) {
+        Set<String> notebookIds = new LinkedHashSet<>();
+        for (PageDto page : pages) {
+            if (page.notebookId() != null) {
+                notebookIds.add(page.notebookId());
+            }
+        }
+
+        Map<String, String> result = new LinkedHashMap<>();
+        for (String notebookId : notebookIds) {
+            UUID id;
+            try {
+                id = UUID.fromString(notebookId);
+            } catch (IllegalArgumentException e) {
+                continue;
+            }
+            notebookRepository.findByIdAndUserId(id, userId)
+                    .filter(Notebook::hasPdf)
+                    .ifPresent(nb -> result.put(notebookId, nb.getPdfText()));
+        }
+        return result;
+    }
+
+    private ScoreDto llmScore(PageDto page, String pdfText) {
         String text = page.combinedText();
         if (text.isBlank()) {
             return new ScoreDto(0, "Page is empty.",
@@ -195,6 +245,11 @@ public class OpenAiEvaluationService {
                 the notes are already excellent.""";
 
         String userPrompt = "Title: " + safe(page.title()) + "\n\nNotes:\n" + text;
+        if (pdfText != null && !pdfText.isBlank()) {
+            userPrompt += "\n\nReference material from the notebook's uploaded PDF "
+                    + "(use as additional context/ground truth, but still score based on the "
+                    + "learner's own explanation):\n" + pdfText;
+        }
 
         try {
             Map<String, Object> body = new LinkedHashMap<>();

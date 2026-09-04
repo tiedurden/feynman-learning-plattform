@@ -2,8 +2,10 @@ package com.feynman.backend.controller;
 
 import com.feynman.backend.dto.EvaluateRequest;
 import com.feynman.backend.dto.EvaluationResponse;
+import com.feynman.backend.security.UserPrincipal;
 import com.feynman.backend.service.OpenAiEvaluationService;
 import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,8 +28,10 @@ public class EvaluationController {
     }
 
     @PostMapping("/evaluate")
-    public EvaluationResponse evaluate(@Valid @RequestBody EvaluateRequest request) {
-        return evaluationService.evaluate(request);
+    public EvaluationResponse evaluate(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody EvaluateRequest request) {
+        return evaluationService.evaluate(principal.getId(), request);
     }
 }
 
