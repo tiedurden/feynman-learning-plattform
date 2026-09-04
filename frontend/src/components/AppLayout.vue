@@ -136,7 +136,6 @@ async function deletePage(pageId: string) {
     console.error('Failed to delete page:', err)
   }
 }
-
 /** Navigate to a referenced page (may live in a different notebook). */
 function navigateToPage(targetPageId: string) {
   const target = store.pageById(targetPageId)
@@ -145,6 +144,32 @@ function navigateToPage(targetPageId: string) {
     name: 'page',
     params: { id: target.notebookId, pageId: target.id }
   })
+}
+
+// --- Reference PDF ----------------------------------------------------------
+const pdfBusy = computed(
+  () => !!activeNotebookId.value && store.pdfBusyNotebookId === activeNotebookId.value
+)
+
+/** Upload (or replace) the active notebook's reference PDF. */
+async function uploadNotebookPdf(file: File) {
+  if (!activeNotebookId.value) return
+  try {
+    await store.uploadNotebookPdf(activeNotebookId.value, file)
+  } catch (err) {
+    // The store already surfaced the message in `store.error`.
+    console.error('Failed to upload PDF:', err)
+  }
+}
+
+/** Remove the active notebook's reference PDF. */
+async function removeNotebookPdf() {
+  if (!activeNotebookId.value) return
+  try {
+    await store.removeNotebookPdf(activeNotebookId.value)
+  } catch (err) {
+    console.error('Failed to remove PDF:', err)
+  }
 }
 
 /** Evaluate only the currently active page (no parent/sibling subpages). */
@@ -208,7 +233,10 @@ function logout() {
       </div>
 
       <div class="toolbar-actions">
-        <span v-if="progress.error" class="eval-error" role="alert">
+        <span v-if="store.error" class="eval-error" role="alert">
+          ⚠️ {{ store.error }}
+        </span>
+        <span v-else-if="progress.error" class="eval-error" role="alert">
           ⚠️ {{ progress.error }}
         </span>
         <span
@@ -274,10 +302,13 @@ function logout() {
         :notebook="activeNotebook"
         :tree="pageTree"
         :active-page-id="activePageId"
+        :pdf-busy="pdfBusy"
         @select="selectPage"
         @add-root="addRootPage"
         @add-child="addChildPage"
         @delete="deletePage"
+        @upload-pdf="uploadNotebookPdf"
+        @remove-pdf="removeNotebookPdf"
       />
 
       <!-- Pane 3: Editor -->
