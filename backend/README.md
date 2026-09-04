@@ -69,6 +69,48 @@ mvn spring-boot:run
 The server listens on `http://localhost:8080` and allows CORS from the Vite dev
 server (`http://localhost:5173`).
 
+**A database is optional.** At startup the app probes the configured PostgreSQL
+host/port:
+
+- **reachable** → uses PostgreSQL and runs the Flyway migrations (data persists).
+- **not reachable** → automatically falls back to an **in-memory H2** database
+  (Flyway disabled, schema generated from the JPA entities) and prints a warning.
+  Data is discarded when the process stops.
+
+So on a machine without Docker or PostgreSQL, `mvn spring-boot:run` just works.
+To disable the fallback and fail fast instead, set
+`app.datasource.fallback-to-h2=false` (or `DB_FALLBACK_TO_H2=false`). The
+fallback is also skipped automatically under the `prod` profile.
+
+### Forcing H2
+
+```bash
+mvn spring-boot:run -Ph2
+```
+
+### Using PostgreSQL (persistent data)
+
+With Docker, from the repository root:
+
+```bash
+docker compose up -d
+```
+
+This starts `postgres:16` with database/user/password `feynman`, matching the
+defaults in `application.yml` (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`).
+Without Docker, create the database once in a local PostgreSQL install:
+
+```sql
+CREATE USER feynman WITH PASSWORD 'feynman';
+CREATE DATABASE feynman OWNER feynman;
+```
+
+### Helper scripts
+
+From the repository root, `./run-backend.ps1` (Windows) or `./run-backend.sh`
+(macOS/Linux) probe the database and start the backend with the matching profile.
+
+
 ### With OpenAI (real grading)
 
 Set an API key before starting:
