@@ -3,9 +3,13 @@
  * Hold-to-record voice explanation. Records a short clip, sends it plus the
  * note's reference text to the backend, then plays back the tutor's spoken
  * reply and shows the transcript.
+ *
+ * The session keeps the last {@link MAX_TURNS} exchanges so the learner can
+ * read back the conversation, and so the tutor gets that history as context.
  */
-import { ref, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, onBeforeUnmount } from 'vue'
 import { sendVoiceMessage } from '@/services/voiceApi'
+import type { VoiceHistoryMessage, VoiceTurn } from '@/types'
 
 const props = defineProps<{
   noteText: string
@@ -13,16 +17,29 @@ const props = defineProps<{
 
 type Status = 'idle' | 'recording' | 'loading'
 
+/** How many back-and-forth exchanges to retain before dropping the oldest. */
+const MAX_TURNS = 10
+
 const status = ref<Status>('idle')
-const userTranscript = ref('')
-const transcript = ref('')
+const turns = ref<VoiceTurn[]>([])
 const error = ref<string | null>(null)
 const recordingSeconds = ref(0)
+const dialogEl = ref<HTMLElement | null>(null)
 
 let mediaRecorder: MediaRecorder | null = null
 let chunks: BlobPart[] = []
 let stream: MediaStream | null = null
 let timerId: ReturnType<typeof setInterval> | null = null
+
+/** Flattens retained turns into the role/text pairs the backend replays to the model. */
+const history = computed<VoiceHistoryMessage[]>(() =>
+  turns.value.flatMap((turn) => {
+    const messages: VoiceHistoryMessage[] = []
+    if (turn.userTranscript) messages.push({ role: 'user', text: turn.userTranscript })
+    if (turn.tutorTranscript) messages.push({ role: 'assistant', text: turn.tutorTranscript })
+    return messages
+  })
+)
 
 function formatDuration(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60)
@@ -36,11 +53,21 @@ function pickMimeType(): string {
   return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? ''
 }
 
+function clearConversation() {
+  turns.value = []
+  error.value = null
+}
+
+/** Replays a stored tutor reply. */
+function playTurn(turn: VoiceTurn) {
+  if (!turn.audioData) return
+  void new Audio(`data:audio/wav;base64,${turn.audioData}`).play()
+}
+
 async function startRecording() {
   if (status.value !== 'idle') return
+  // Previous turns are intentionally preserved — only the error is reset.
   error.value = null
-  userTranscript.value = ''
-  transcript.value = ''
 
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -80,10 +107,25 @@ async function onRecordingStopped() {
   status.value = 'loading'
   try {
     const blob = new Blob(chunks, { type: mediaRecorder?.mimeType || 'audio/webm' })
-    const result = await sendVoiceMessage(blob, props.noteText)
-    userTranscript.value = result.userTranscript
-    transcript.value = result.transcript
-    new Audio(`data:audio/wav;base64,${result.audioData}`).play()
+    const result = await sendVoiceMessage(blob, props.noteText, history.value)
+
+    turns.value.push({
+      id: `turn-${Date.now()}-${turns.value.length}`,
+      userTranscript: result.userTranscript,
+      tutorTranscript: result.transcript,
+      audioData: result.audioData
+    })
+    // Drop the oldest exchanges once the cap is exceeded.
+    if (turns.value.length > MAX_TURNS) {
+      turns.value = turns.value.slice(-MAX_TURNS)
+    }
+
+    if (result.audioData) {
+      void new Audio(`data:audio/wav;base64,${result.audioData}`).play()
+    }
+
+    await nextTick()
+    dialogEl.value?.scrollTo({ top: dialogEl.value.scrollHeight, behavior: 'smooth' })
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Voice chat request failed.'
   } finally {
@@ -99,21 +141,33 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="voice-chat">
-    <button
-      type="button"
-      class="record-btn"
-      :class="{ recording: status === 'recording' }"
-      :disabled="status === 'loading'"
-      @mousedown="startRecording"
-      @mouseup="stopRecording"
-      @mouseleave="stopRecording"
-      @touchstart.prevent="startRecording"
-      @touchend.prevent="stopRecording"
-    >
-      <span v-if="status === 'loading'" class="spinner" />
-      <span v-else-if="status === 'recording'">● Recording…</span>
-      <span v-else>🎤 Hold to explain</span>
-    </button>
+    <div class="voice-toolbar">
+      <button
+        type="button"
+        class="record-btn"
+        :class="{ recording: status === 'recording' }"
+        :disabled="status === 'loading'"
+        @mousedown="startRecording"
+        @mouseup="stopRecording"
+        @mouseleave="stopRecording"
+        @touchstart.prevent="startRecording"
+        @touchend.prevent="stopRecording"
+      >
+        <span v-if="status === 'loading'" class="spinner" />
+        <span v-else-if="status === 'recording'">● Recording…</span>
+        <span v-else>🎤 Hold to explain</span>
+      </button>
+
+      <button
+        v-if="turns.length"
+        type="button"
+        class="clear-btn"
+        :disabled="status !== 'idle'"
+        @click="clearConversation"
+      >
+        Clear
+      </button>
+    </div>
 
     <!-- Prominent page-level indicator, not just the button's own label -->
     <div v-if="status === 'recording'" class="recording-indicator">
@@ -123,15 +177,28 @@ onBeforeUnmount(() => {
 
     <p v-if="error" class="voice-error">{{ error }}</p>
 
-    <div v-if="userTranscript || transcript" class="voice-dialog">
-      <p v-if="userTranscript" class="voice-bubble voice-bubble-user">
-        <span class="voice-bubble-label">You said</span>
-        {{ userTranscript }}
-      </p>
-      <p v-if="transcript" class="voice-bubble voice-bubble-tutor">
-        <span class="voice-bubble-label">Tutor</span>
-        {{ transcript }}
-      </p>
+    <div v-if="turns.length" ref="dialogEl" class="voice-dialog">
+      <template v-for="turn in turns" :key="turn.id">
+        <p v-if="turn.userTranscript" class="voice-bubble voice-bubble-user">
+          <span class="voice-bubble-label">You said</span>
+          {{ turn.userTranscript }}
+        </p>
+        <p v-if="turn.tutorTranscript" class="voice-bubble voice-bubble-tutor">
+          <span class="voice-bubble-label">
+            Tutor
+            <button
+              v-if="turn.audioData"
+              type="button"
+              class="replay-btn"
+              title="Replay this reply"
+              @click="playTurn(turn)"
+            >
+              ▶
+            </button>
+          </span>
+          {{ turn.tutorTranscript }}
+        </p>
+      </template>
     </div>
   </div>
 </template>
@@ -142,6 +209,12 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 8px;
   padding: 12px;
+}
+
+.voice-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .record-btn {
@@ -157,6 +230,41 @@ onBeforeUnmount(() => {
   transition:
     background 0.15s ease,
     color 0.15s ease;
+}
+
+.clear-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border, #d0d0d0);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.clear-btn:hover:not(:disabled) {
+  opacity: 1;
+  background: var(--hover);
+}
+
+.clear-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.replay-btn {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0 4px;
+  opacity: 0.8;
+}
+
+.replay-btn:hover {
+  opacity: 1;
 }
 
 .record-btn:disabled {
@@ -224,6 +332,10 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Keeps a long session from pushing the recorder off-screen. */
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .voice-bubble {

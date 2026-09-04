@@ -5,17 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f8ee5bea-822c-4815-aa94-aa6a0f61d913" name="Changes" comment="add evaluate subpage only + tests">
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/config/DatabaseFallbackEnvironmentPostProcessor.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/resources/META-INF/spring.factories" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/resources/application-h2.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/run-backend.ps1" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/run-backend.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/copilotDiffState.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/copilotDiffState.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/backend/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/config/OpenAiClientConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/config/OpenAiClientConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/controller/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/controller/GlobalExceptionHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/controller/VoiceChatController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/controller/VoiceChatController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/service/VoiceChatService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/service/VoiceChatService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/VoiceChat.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/VoiceChat.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/services/voiceApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/services/voiceApi.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/types/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/types/index.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

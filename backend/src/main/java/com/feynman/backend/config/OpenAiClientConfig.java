@@ -12,6 +12,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import java.net.http.HttpClient;
 import java.security.KeyStore;
+import java.time.Duration;
 
 /**
  * Builds the {@link RestClient} used to talk to the OpenAI chat completions
@@ -28,6 +29,9 @@ import java.security.KeyStore;
 public class OpenAiClientConfig {
 
     private static final Logger log = LoggerFactory.getLogger(OpenAiClientConfig.class);
+
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration READ_TIMEOUT = Duration.ofSeconds(60);
 
     @Bean
     public RestClient openAiRestClient(
@@ -48,6 +52,7 @@ public class OpenAiClientConfig {
             type = "Windows-ROOT";
         }
 
+        SSLContext sslContext = null;
         if (type != null && !type.isBlank()) {
             try {
                 KeyStore keyStore = KeyStore.getInstance(type);
@@ -55,13 +60,8 @@ public class OpenAiClientConfig {
                 TrustManagerFactory tmf = TrustManagerFactory.getInstance(
                         TrustManagerFactory.getDefaultAlgorithm());
                 tmf.init(keyStore);
-                SSLContext sslContext = SSLContext.getInstance("TLS");
+                sslContext = SSLContext.getInstance("TLS");
                 sslContext.init(null, tmf.getTrustManagers(), null);
-
-                HttpClient httpClient = HttpClient.newBuilder()
-                        .sslContext(sslContext)
-                        .build();
-                builder.requestFactory(new JdkClientHttpRequestFactory(httpClient));
                 log.info("OpenAI HTTP client trusting certificates from '{}' store.", type);
             } catch (Exception e) {
                 log.warn("Could not initialise trust store '{}'; falling back to JDK default "
@@ -69,6 +69,18 @@ public class OpenAiClientConfig {
                         type, e.getMessage());
             }
         }
+
+        // Explicit timeouts: without them a stalled OpenAI call blocks the request thread
+        // indefinitely, which surfaces to the user as a request that "never returns".
+        HttpClient.Builder httpClientBuilder = HttpClient.newBuilder()
+                .connectTimeout(CONNECT_TIMEOUT);
+        if (sslContext != null) {
+            httpClientBuilder.sslContext(sslContext);
+        }
+        JdkClientHttpRequestFactory requestFactory =
+                new JdkClientHttpRequestFactory(httpClientBuilder.build());
+        requestFactory.setReadTimeout(READ_TIMEOUT);
+        builder.requestFactory(requestFactory);
 
         return builder.build();
     }
