@@ -51,7 +51,7 @@ public class PageService {
         Page page = new Page(notebook, parent, request.title(), order);
         page.setContent(request.content());
         applyBoxes(page, userId, request.boxes());
-        return toResponse(pageRepository.save(page));
+        return toResponse(pageRepository.saveAndFlush(page));
     }
 
     public PageResponse update(UUID userId, UUID pageId, PageRequest request) {
@@ -67,7 +67,7 @@ public class PageService {
             page.setOrderIndex(request.order());
         }
         applyBoxes(page, userId, request.boxes());
-        return toResponse(page);
+        return toResponse(pageRepository.saveAndFlush(page));
     }
 
     public void delete(UUID userId, UUID pageId) {
@@ -123,14 +123,18 @@ public class PageService {
             if (boxPayload.id() != null && !boxPayload.id().isBlank()) {
                 try {
                     UUID boxId = UUID.fromString(boxPayload.id());
-                    box = existingMap.getOrDefault(boxId, new TextBox(page, boxPayload.x(), boxPayload.y(), boxPayload.text()));
-                    // Ensure the box has the correct ID (matters for newly created boxes)
-                    if (box.getId() == null) {
-                        box.setId(boxId);
+                    TextBox existing = existingMap.get(boxId);
+                    if (existing != null) {
+                        box = existing;
+                        box.setX(boxPayload.x());
+                        box.setY(boxPayload.y());
+                        box.setText(boxPayload.text());
+                    } else {
+                        // Unknown ID means this box hasn't been persisted yet; let Hibernate
+                        // generate the real ID on flush rather than forcing the client's ID
+                        // (forcing it makes Hibernate treat the entity as detached).
+                        box = new TextBox(page, boxPayload.x(), boxPayload.y(), boxPayload.text());
                     }
-                    box.setX(boxPayload.x());
-                    box.setY(boxPayload.y());
-                    box.setText(boxPayload.text());
                 } catch (IllegalArgumentException e) {
                     // Invalid UUID, skip
                     continue;
@@ -168,14 +172,17 @@ public class PageService {
                 TextReference ref;
                 if (refPayload.id() != null && !refPayload.id().isBlank()) {
                     UUID refId = UUID.fromString(refPayload.id());
-                    ref = existingMap.getOrDefault(refId, new TextReference(box, refPayload.start(), refPayload.end(), targetPage));
-                    // Ensure the reference has the correct ID (matters for newly created references)
-                    if (ref.getId() == null) {
-                        ref.setId(refId);
+                    TextReference existing = existingMap.get(refId);
+                    if (existing != null) {
+                        ref = existing;
+                        ref.setStartOffset(refPayload.start());
+                        ref.setEndOffset(refPayload.end());
+                        ref.setTargetPage(targetPage);
+                    } else {
+                        // Unknown ID means this reference hasn't been persisted yet; let
+                        // Hibernate generate the real ID on flush.
+                        ref = new TextReference(box, refPayload.start(), refPayload.end(), targetPage);
                     }
-                    ref.setStartOffset(refPayload.start());
-                    ref.setEndOffset(refPayload.end());
-                    ref.setTargetPage(targetPage);
                 } else {
                     ref = new TextReference(box, refPayload.start(), refPayload.end(), targetPage);
                 }

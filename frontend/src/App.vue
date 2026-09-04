@@ -19,13 +19,12 @@ async function loadData() {
 }
 
 onMounted(() => {
-  // Watch for auth state changes and load when authenticated
+  // Watch for auth state changes; always resolve loadingData regardless of auth state
+  // (unauthenticated users need router-view to render so they can reach the login page)
   watch(
     () => authStore.isAuthenticated,
-    (isAuth) => {
-      if (isAuth) {
-        loadData()
-      }
+    () => {
+      loadData()
     },
     { immediate: true }
   )
