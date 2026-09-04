@@ -125,7 +125,8 @@ async function onRecordingStopped() {
     }
 
     await nextTick()
-    dialogEl.value?.scrollTo({ top: dialogEl.value.scrollHeight, behavior: 'smooth' })
+    // Guarded: scrollTo is absent in jsdom and older browsers.
+    dialogEl.value?.scrollTo?.({ top: dialogEl.value.scrollHeight, behavior: 'smooth' })
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Voice chat request failed.'
   } finally {

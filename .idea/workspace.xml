@@ -4,17 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f8ee5bea-822c-4815-aa94-aa6a0f61d913" name="Changes" comment="add evaluate subpage only + tests">
+    <list default="true" id="f8ee5bea-822c-4815-aa94-aa6a0f61d913" name="Changes" comment="voice chat list">
+      <change afterPath="$PROJECT_DIR$/frontend/src/components/__tests__/VoiceChat.spec.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/copilotDiffState.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/copilotDiffState.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/config/OpenAiClientConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/config/OpenAiClientConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/controller/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/controller/GlobalExceptionHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/controller/VoiceChatController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/controller/VoiceChatController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/service/VoiceChatService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/feynman/backend/service/VoiceChatService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/test/java/com/feynman/backend/service/VoiceChatServiceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/test/java/com/feynman/backend/service/VoiceChatServiceTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/components/VoiceChat.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/VoiceChat.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/services/voiceApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/services/voiceApi.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/types/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/types/index.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -432,7 +427,15 @@
       <option name="project" value="LOCAL" />
       <updated>1787643974445</updated>
     </task>
-    <option name="localTasksCounter" value="24" />
+    <task id="LOCAL-00024" summary="voice chat list">
+      <option name="closed" value="true" />
+      <created>1788541507784</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1788541507784</updated>
+    </task>
+    <option name="localTasksCounter" value="25" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -463,7 +466,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="FLP2 on page click to create text box" />
-    <MESSAGE value="FLP2 on page click to create text box" />
     <MESSAGE value="when textbox is empty it gets deleted" />
     <MESSAGE value="show full textbox all the time (dont collapse when somewhere else clicked)" />
     <MESSAGE value="refactor textbox functionality to be own component" />
@@ -487,7 +489,8 @@
     <MESSAGE value="fix tests" />
     <MESSAGE value="use better model" />
     <MESSAGE value="add evaluate subpage only + tests" />
-    <option name="LAST_COMMIT_MESSAGE" value="add evaluate subpage only + tests" />
+    <MESSAGE value="voice chat list" />
+    <option name="LAST_COMMIT_MESSAGE" value="voice chat list" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>
