@@ -21,10 +21,6 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-  servlet:
-    multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
 
 # Local convenience: if the PostgreSQL server above is not reachable at startup,
 # the app automatically falls back to an in-memory H2 database (Flyway off,
