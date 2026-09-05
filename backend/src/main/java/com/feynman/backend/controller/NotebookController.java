@@ -5,6 +5,7 @@ import com.feynman.backend.dto.NotebookResponse;
 import com.feynman.backend.security.UserPrincipal;
 import com.feynman.backend.service.NotebookService;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,7 +14,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -49,5 +52,18 @@ public class NotebookController {
     @DeleteMapping("/{id}")
     public void delete(@AuthenticationPrincipal UserPrincipal principal, @PathVariable UUID id) {
         notebookService.delete(principal.getId(), id);
+    }
+
+    @PostMapping(value = "/{id}/pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public NotebookResponse uploadPdf(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id,
+            @RequestPart("file") MultipartFile file) {
+        return notebookService.uploadPdf(principal.getId(), id, file);
+    }
+
+    @DeleteMapping("/{id}/pdf")
+    public NotebookResponse removePdf(@AuthenticationPrincipal UserPrincipal principal, @PathVariable UUID id) {
+        return notebookService.removePdf(principal.getId(), id);
     }
 }
