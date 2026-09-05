@@ -67,14 +67,6 @@ public class GlobalExceptionHandler {
         return pd;
     }
 
-    @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ProblemDetail handleMaxUploadSize(MaxUploadSizeExceededException ex) {
-        ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.PAYLOAD_TOO_LARGE);
-        pd.setTitle("File too large");
-        pd.setDetail("Uploaded file exceeds the 10MB limit.");
-        return pd;
-    }
-
     @ExceptionHandler(IllegalArgumentException.class)
     public ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
         ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
