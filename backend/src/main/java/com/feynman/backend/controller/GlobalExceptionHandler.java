@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -98,6 +99,25 @@ public class GlobalExceptionHandler {
         pd.setTitle("Voice chat failed");
         pd.setDetail(ex.getMessage());
         return pd;
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ProblemDetail handleUploadTooLarge(MaxUploadSizeExceededException ex) {
+        log.warn("Upload rejected — too large: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.PAYLOAD_TOO_LARGE);
+        pd.setTitle("Upload too large");
+        pd.setDetail("The uploaded file exceeds the maximum allowed size.");
+        return pd;
+    }
+
+    /**
+     * Spring's own MVC exceptions (unsupported media type, missing part, unreadable body, ...)
+     * already carry a meaningful status; preserve it instead of reporting a misleading 500.
+     */
+    @ExceptionHandler(ErrorResponseException.class)
+    public ProblemDetail handleErrorResponse(ErrorResponseException ex) {
+        log.warn("Request rejected ({}): {}", ex.getStatusCode(), ex.getMessage());
+        return ex.getBody();
     }
 
     @ExceptionHandler(Exception.class)

@@ -1,0 +1,32 @@
+# Local development database for the Feynman backend.
+#
+# Start it with:
+#   docker compose up -d
+#
+# The credentials match the defaults in backend/src/main/resources/application.yml
+# (DB_URL / DB_USERNAME / DB_PASSWORD), so the backend connects with no extra
+# configuration.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: feynman-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: feynman
+      POSTGRES_USER: feynman
+      POSTGRES_PASSWORD: feynman
+    ports:
+      - "5432:5432"
+    volumes:
+      - feynman-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # Flyway runs at startup, so wait until the server actually accepts
+      # connections instead of just until the container is "running".
+      test: ["CMD-SHELL", "pg_isready -U feynman -d feynman"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  feynman-pgdata:
+

@@ -135,3 +135,20 @@ export interface VoiceChatResponse {
   audioData: string
 }
 
+/** One completed exchange in a voice tutoring session. */
+export interface VoiceTurn {
+  id: string
+  /** What the learner said. */
+  userTranscript: string
+  /** The tutor's spoken reply, as text. */
+  tutorTranscript: string
+  /** Base64-encoded WAV of the tutor reply, so past replies stay replayable. */
+  audioData: string
+}
+
+/** A prior turn, flattened for sending back to the model as conversation context. */
+export interface VoiceHistoryMessage {
+  role: 'user' | 'assistant'
+  text: string
+}
+

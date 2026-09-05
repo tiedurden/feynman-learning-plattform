@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: feynman-backend
+  servlet:
+    multipart:
+      # Voice recordings are sent as multipart uploads; the 1MB default is far too small.
+      max-file-size: ${MAX_UPLOAD_SIZE:25MB}
+      max-request-size: ${MAX_REQUEST_SIZE:30MB}
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/feynman}
     username: ${DB_USERNAME:feynman}
@@ -20,6 +25,14 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+
+# Local convenience: if the PostgreSQL server above is not reachable at startup,
+# the app automatically falls back to an in-memory H2 database (Flyway off,
+# schema generated from the entities) so it still boots without Docker.
+# Data is NOT persisted in that mode. Set this to false to fail fast instead.
+app:
+  datasource:
+    fallback-to-h2: ${DB_FALLBACK_TO_H2:true}
 
 # JWT signing key for local dev — override JWT_SECRET in every other environment.
 jwt:

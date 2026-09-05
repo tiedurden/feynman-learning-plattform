@@ -87,10 +87,15 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!--
+          Runtime (not test) scope on purpose: the app falls back to an
+          in-memory H2 database when PostgreSQL is unreachable, so the driver
+          must be on the runtime classpath too.
+        -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <scope>test</scope>
+            <scope>runtime</scope>
         </dependency>
     </dependencies>
 
@@ -102,4 +107,18 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!--
+          Convenience profile for machines without Docker/PostgreSQL:
+              mvn spring-boot:run -Ph2
+          activates the Spring "h2" profile (in-memory database, no Flyway).
+        -->
+        <profile>
+            <id>h2</id>
+            <properties>
+                <spring-boot.run.profiles>h2</spring-boot.run.profiles>
+            </properties>
+        </profile>
+    </profiles>
 </project>
