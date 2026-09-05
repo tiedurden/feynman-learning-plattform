@@ -9,6 +9,7 @@ import com.feynman.backend.dto.ScoreDto;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -19,10 +20,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class OpenAiEvaluationServiceTest {
 
+    // Mock scoring never touches the DB, so a null repository and any user id are safe here.
+    private static final UUID TEST_USER_ID = UUID.randomUUID();
+
     private OpenAiEvaluationService newMockService() {
         OpenAiProperties props = new OpenAiProperties("", "gpt-4o-mini",
                 "gpt-4o-audio-preview", "gpt-4o-mini-transcribe", "https://api.openai.com/v1", true);
-        return new OpenAiEvaluationService(null, props);
+        return new OpenAiEvaluationService(null, props, null);
     }
 
     @Test
@@ -37,8 +41,8 @@ class OpenAiEvaluationServiceTest {
                 List.of(new NotebookDto("nb-study", "Study", "#c94f0c")),
                 List.of(page), null, null);
 
-        EvaluationResponse first = service.evaluate(request);
-        EvaluationResponse second = service.evaluate(request);
+        EvaluationResponse first = service.evaluate(TEST_USER_ID, request);
+        EvaluationResponse second = service.evaluate(TEST_USER_ID, request);
 
         ScoreDto pageScore = first.pageScores().get("pg-feynman");
         assertEquals(pageScore.score(), second.pageScores().get("pg-feynman").score(),
@@ -53,7 +57,7 @@ class OpenAiEvaluationServiceTest {
         PageDto p1 = new PageDto("pg-1", "nb-1", null, "A", "one two three", List.of(), 0);
         PageDto p2 = new PageDto("pg-2", "nb-1", null, "B", "four five six seven", List.of(), 1);
 
-        EvaluationResponse res = service.evaluate(new EvaluateRequest(
+        EvaluationResponse res = service.evaluate(TEST_USER_ID, new EvaluateRequest(
                 List.of(new NotebookDto("nb-1", "N", "#000")),
                 List.of(p1, p2), null, null));
 
@@ -67,7 +71,7 @@ class OpenAiEvaluationServiceTest {
         OpenAiEvaluationService service = newMockService();
         PageDto empty = new PageDto("pg-empty", "nb-1", null, "Empty", "   ", List.of(), 0);
         EvaluationResponse res = service.evaluate(
-                new EvaluateRequest(List.of(), List.of(empty), null, null));
+                TEST_USER_ID, new EvaluateRequest(List.of(), List.of(empty), null, null));
         assertEquals(0, res.pageScores().get("pg-empty").score());
     }
 
@@ -77,7 +81,7 @@ class OpenAiEvaluationServiceTest {
         PageDto a = new PageDto("pg-a", "nb-1", null, "A", "alpha beta gamma", List.of(), 0);
         PageDto b = new PageDto("pg-b", "nb-2", null, "B", "delta epsilon", List.of(), 0);
 
-        EvaluationResponse res = service.evaluate(new EvaluateRequest(
+        EvaluationResponse res = service.evaluate(TEST_USER_ID, new EvaluateRequest(
                 List.of(new NotebookDto("nb-1", "One", "#000"),
                         new NotebookDto("nb-2", "Two", "#111")),
                 List.of(a, b), "nb-1", null));
@@ -96,7 +100,7 @@ class OpenAiEvaluationServiceTest {
         PageDto child1 = new PageDto("pg-child-1", "nb-1", "pg-parent", "Child 1", "delta epsilon", List.of(), 0);
         PageDto child2 = new PageDto("pg-child-2", "nb-1", "pg-parent", "Child 2", "zeta eta theta", List.of(), 1);
 
-        EvaluationResponse res = service.evaluate(new EvaluateRequest(
+        EvaluationResponse res = service.evaluate(TEST_USER_ID, new EvaluateRequest(
                 List.of(new NotebookDto("nb-1", "One", "#000")),
                 List.of(parent, child1, child2), "nb-1", "pg-child-1"));
 
@@ -233,7 +237,7 @@ class OpenAiEvaluationServiceTest {
         OpenAiEvaluationService service = newMockService();
         PageDto page = new PageDto("pg-a", "nb-1", null, "A", "brief", List.of(), 0);
 
-        EvaluationResponse res = service.evaluate(new EvaluateRequest(
+        EvaluationResponse res = service.evaluate(TEST_USER_ID, new EvaluateRequest(
                 List.of(new NotebookDto("nb-1", "N", "#000")), List.of(page), null, null));
 
         ScoreDto pageScore = res.pageScores().get("pg-a");

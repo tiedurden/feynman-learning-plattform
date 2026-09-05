@@ -241,8 +241,54 @@ export const useNotesStore = defineStore('notes', {
       }
     },
 
-    // --- UI preferences -------------------------------------------------------
-    /** Persist all lightweight UI preferences together (best-effort). */
+    // --- Notebook reference PDF ------------------------------------------------
+    /**
+     * Upload (or replace) the reference PDF of a notebook. The server extracts
+     * the text and uses it as ground truth when evaluating that notebook's pages.
+     *
+     * @throws when the upload is rejected (wrong type, too large, unreadable) so
+     *         the caller can surface the message inline.
+     */
+    async uploadNotebookPdf(notebookId: string, file: File) {
+      this.pdfBusyNotebookId = notebookId
+      this.error = null
+      try {
+        const updated = await notebooksApi.uploadNotebookPdf(notebookId, file)
+        this.replaceNotebook(updated)
+        return updated
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to upload PDF'
+        throw err
+      } finally {
+        this.pdfBusyNotebookId = null
+      }
+    },
+
+    /** Remove the reference PDF of a notebook. */
+    async removeNotebookPdf(notebookId: string) {
+      this.pdfBusyNotebookId = notebookId
+      this.error = null
+      try {
+        const updated = await notebooksApi.removeNotebookPdf(notebookId)
+        this.replaceNotebook(updated)
+        return updated
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to remove PDF'
+        throw err
+      } finally {
+        this.pdfBusyNotebookId = null
+      }
+    },
+
+    /** Reconcile a notebook in local state with the server response. */
+    replaceNotebook(notebook: Notebook) {
+      const idx = this.notebooks.findIndex((n) => n.id === notebook.id)
+      if (idx >= 0) {
+        this.notebooks[idx] = notebook
+      }
+    },
+
+    // --- UI preferences -------------------------------------------------------    /** Persist all lightweight UI preferences together (best-effort). */
     persistUiPrefs() {
       try {
         localStorage.setItem(

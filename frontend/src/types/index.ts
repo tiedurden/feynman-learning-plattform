@@ -17,6 +17,13 @@ export interface Notebook {
   title: string
   /** Accent color used for the notebook chip / active state. */
   color: string
+  /**
+   * True when a reference PDF has been uploaded for this notebook. Its extracted
+   * text is injected into the evaluation prompt as ground truth.
+   */
+  hasPdf?: boolean
+  /** Original filename of the uploaded PDF (null/undefined when none). */
+  pdfFileName?: string | null
 }
 
 /**

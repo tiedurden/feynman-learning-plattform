@@ -4,6 +4,8 @@ package com.feynman.backend.dto;
 public record NotebookResponse(
         String id,
         String title,
-        String color
+        String color,
+        boolean hasPdf,
+        String pdfFileName
 ) {
 }

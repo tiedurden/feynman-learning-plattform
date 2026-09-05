@@ -8,6 +8,8 @@ defineProps<{
   notebook?: Notebook
   tree: PageNode[]
   activePageId?: string
+  /** True while this notebook's PDF is being uploaded or removed. */
+  pdfBusy?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -15,10 +17,29 @@ const emit = defineEmits<{
   (e: 'add-root'): void
   (e: 'add-child', parentId: string): void
   (e: 'delete', id: string): void
+  (e: 'upload-pdf', file: File): void
+  (e: 'remove-pdf'): void
 }>()
 
 // --- Progress display toggle ----------------------------------------------
 const showProgress = ref(false)
+
+// --- Reference PDF ---------------------------------------------------------
+const fileInput = ref<HTMLInputElement | null>(null)
+
+function pickPdf() {
+  fileInput.value?.click()
+}
+
+function onPdfSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (file) {
+    emit('upload-pdf', file)
+  }
+  // Reset so selecting the same file again still fires a change event.
+  input.value = ''
+}
 </script>
 
 <template>
@@ -33,6 +54,52 @@ const showProgress = ref(false)
       >
         ＋
       </button>
+    </div>
+
+    <!-- Reference PDF for this notebook (used as ground truth when evaluating) -->
+    <div v-if="notebook" class="pdf-bar">
+      <input
+        ref="fileInput"
+        class="pdf-input"
+        type="file"
+        accept="application/pdf,.pdf"
+        data-testid="pdf-input"
+        @change="onPdfSelected"
+      />
+
+      <template v-if="notebook.hasPdf">
+        <span class="pdf-name" :title="notebook.pdfFileName ?? 'Reference PDF'">
+          📄 {{ notebook.pdfFileName ?? 'Reference PDF' }}
+        </span>
+        <button
+          class="pdf-btn"
+          title="Replace PDF"
+          :disabled="pdfBusy"
+          @click="pickPdf"
+        >
+          Replace
+        </button>
+        <button
+          class="pdf-btn pdf-btn-danger"
+          title="Remove PDF"
+          :disabled="pdfBusy"
+          @click="emit('remove-pdf')"
+        >
+          Remove
+        </button>
+      </template>
+
+      <template v-else>
+        <span class="pdf-name pdf-name-muted">No reference PDF</span>
+        <button
+          class="pdf-btn"
+          title="Upload a reference PDF (max 10MB)"
+          :disabled="pdfBusy"
+          @click="pickPdf"
+        >
+          {{ pdfBusy ? 'Uploading…' : 'Upload PDF' }}
+        </button>
+      </template>
     </div>
 
     <div class="tree-scroll">
@@ -102,6 +169,53 @@ const showProgress = ref(false)
 .icon-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.pdf-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.pdf-input {
+  display: none;
+}
+
+.pdf-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pdf-name-muted {
+  color: var(--text-muted);
+}
+
+.pdf-btn {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pdf-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+.pdf-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pdf-btn-danger {
+  color: #a4262c;
 }
 
 .tree-scroll {
