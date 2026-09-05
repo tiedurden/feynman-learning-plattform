@@ -2,6 +2,7 @@ package com.feynman.backend.controller;
 
 import com.feynman.backend.exception.EmailAlreadyInUseException;
 import com.feynman.backend.exception.InvalidCredentialsException;
+import com.feynman.backend.exception.InvalidFileException;
 import com.feynman.backend.exception.ResourceNotFoundException;
 import com.feynman.backend.service.OpenAiEvaluationService.EvaluationException;
 import com.feynman.backend.service.VoiceChatService.VoiceException;
@@ -55,6 +56,22 @@ public class GlobalExceptionHandler {
         ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
         pd.setTitle("Not found");
         pd.setDetail(ex.getMessage());
+        return pd;
+    }
+
+    @ExceptionHandler(InvalidFileException.class)
+    public ProblemDetail handleInvalidFile(InvalidFileException ex) {
+        ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        pd.setTitle("Invalid file");
+        pd.setDetail(ex.getMessage());
+        return pd;
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ProblemDetail handleMaxUploadSize(MaxUploadSizeExceededException ex) {
+        ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.PAYLOAD_TOO_LARGE);
+        pd.setTitle("File too large");
+        pd.setDetail("Uploaded file exceeds the 10MB limit.");
         return pd;
     }
 

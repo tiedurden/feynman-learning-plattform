@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -37,6 +38,20 @@ public class Notebook {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Column(name = "pdf_filename")
+    private String pdfFilename;
+
+    @Lob
+    @Column(name = "pdf_content")
+    private byte[] pdfContent;
+
+    @Lob
+    @Column(name = "pdf_text")
+    private String pdfText;
+
+    @Column(name = "pdf_uploaded_at")
+    private Instant pdfUploadedAt;
 
     protected Notebook() {
         // JPA
@@ -90,5 +105,49 @@ public class Notebook {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public String getPdfFilename() {
+        return pdfFilename;
+    }
+
+    public void setPdfFilename(String pdfFilename) {
+        this.pdfFilename = pdfFilename;
+    }
+
+    public byte[] getPdfContent() {
+        return pdfContent;
+    }
+
+    public void setPdfContent(byte[] pdfContent) {
+        this.pdfContent = pdfContent;
+    }
+
+    public String getPdfText() {
+        return pdfText;
+    }
+
+    public void setPdfText(String pdfText) {
+        this.pdfText = pdfText;
+    }
+
+    public Instant getPdfUploadedAt() {
+        return pdfUploadedAt;
+    }
+
+    public void setPdfUploadedAt(Instant pdfUploadedAt) {
+        this.pdfUploadedAt = pdfUploadedAt;
+    }
+
+    public boolean hasPdf() {
+        return pdfContent != null;
+    }
+
+    /** Clears all uploaded-PDF state (used when removing or replacing the file). */
+    public void clearPdf() {
+        pdfFilename = null;
+        pdfContent = null;
+        pdfText = null;
+        pdfUploadedAt = null;
     }
 }
