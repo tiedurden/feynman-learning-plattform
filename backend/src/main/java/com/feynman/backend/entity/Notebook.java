@@ -13,6 +13,9 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -42,11 +45,13 @@ public class Notebook {
     @Column(name = "pdf_filename")
     private String pdfFilename;
 
-    @Lob
+    // VARBINARY forces Hibernate 6 to map this as bytea, not a Postgres large object (oid).
+    @JdbcTypeCode(SqlTypes.VARBINARY)
     @Column(name = "pdf_content")
     private byte[] pdfContent;
 
-    @Lob
+    // LONGVARCHAR forces Hibernate 6 to map this as text, not a Postgres large object (oid).
+    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     @Column(name = "pdf_text")
     private String pdfText;
 
