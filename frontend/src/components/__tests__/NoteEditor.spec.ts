@@ -8,12 +8,12 @@ import { useNotesStore } from '@/stores/notesStore'
 import { setLiveScores, clearProgress } from '@/utils/progress'
 import type { Page } from '@/types'
 
-function setup() {
+async function setup() {
   const pinia = createPinia()
   setActivePinia(pinia)
   const store = useNotesStore()
-  const nb = store.addNotebook('Test NB')
-  const page = store.addPage(nb.id, null, 'Test Page')
+  const nb = await store.addNotebook('Test NB')
+  const page = await store.addPage(nb.id, null, 'Test Page')
   return { pinia, store, page }
 }
 
@@ -31,7 +31,7 @@ describe('NoteEditor — text box behaviour', () => {
   })
 
   it('creates a draft box when the canvas is clicked', async () => {
-    const { pinia, store, page } = setup()
+    const { pinia, store, page } = await setup()
     const wrapper = mountEditor(page, pinia)
 
     expect(wrapper.findComponent(TextBoxItem).exists()).toBe(false)
@@ -47,7 +47,7 @@ describe('NoteEditor — text box behaviour', () => {
   })
 
   it('calls preventDefault on canvas mousedown (keeps focus on the new box)', async () => {
-    const { pinia, page } = setup()
+    const { pinia, page } = await setup()
     const wrapper = mountEditor(page, pinia)
 
     const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true })
@@ -59,7 +59,7 @@ describe('NoteEditor — text box behaviour', () => {
   })
 
   it('persists a draft that has text when it blurs', async () => {
-    const { pinia, store, page } = setup()
+    const { pinia, store, page } = await setup()
     const wrapper = mountEditor(page, pinia)
 
     await wrapper.get('.canvas').trigger('mousedown')
@@ -75,7 +75,7 @@ describe('NoteEditor — text box behaviour', () => {
   })
 
   it('discards an empty draft on blur', async () => {
-    const { pinia, store, page } = setup()
+    const { pinia, store, page } = await setup()
     const wrapper = mountEditor(page, pinia)
 
     await wrapper.get('.canvas').trigger('mousedown')
@@ -87,7 +87,7 @@ describe('NoteEditor — text box behaviour', () => {
   })
 
   it('treats a whitespace-only draft as empty', async () => {
-    const { pinia, store, page } = setup()
+    const { pinia, store, page } = await setup()
     const wrapper = mountEditor(page, pinia)
 
     await wrapper.get('.canvas').trigger('mousedown')
@@ -101,7 +101,7 @@ describe('NoteEditor — text box behaviour', () => {
   })
 
   it('prunes a previous empty draft when creating a new one', async () => {
-    const { pinia, page } = setup()
+    const { pinia, page } = await setup()
     const wrapper = mountEditor(page, pinia)
 
     await wrapper.get('.canvas').trigger('mousedown')
@@ -113,7 +113,7 @@ describe('NoteEditor — text box behaviour', () => {
   })
 
   it('updates the store when a saved box is edited', async () => {
-    const { pinia, store, page } = setup()
+    const { pinia, store, page } = await setup()
     store.addTextBox(page.id, { x: 10, y: 10, text: 'Old' })
     const wrapper = mountEditor(page, pinia)
 
@@ -126,7 +126,7 @@ describe('NoteEditor — text box behaviour', () => {
   })
 
   it('deletes a saved box when it is emptied', async () => {
-    const { pinia, store, page } = setup()
+    const { pinia, store, page } = await setup()
     store.addTextBox(page.id, { x: 10, y: 10, text: 'Old' })
     const wrapper = mountEditor(page, pinia)
 
@@ -140,8 +140,8 @@ describe('NoteEditor — text box behaviour', () => {
   })
 
   it('clears drafts when the page changes', async () => {
-    const { pinia, store, page } = setup()
-    const other = store.addPage(page.notebookId, null, 'Other Page')
+    const { pinia, store, page } = await setup()
+    const other = await store.addPage(page.notebookId, null, 'Other Page')
     const wrapper = mountEditor(page, pinia)
 
     await wrapper.get('.canvas').trigger('mousedown')
@@ -152,7 +152,7 @@ describe('NoteEditor — text box behaviour', () => {
     wrapper.unmount()
   })
 
-  it('shows the placeholder and no canvas when no page is selected', () => {
+  it('shows the placeholder and no canvas when no page is selected', async () => {
     const wrapper = mountEditor(undefined)
     expect(wrapper.find('.placeholder').exists()).toBe(true)
     expect(wrapper.find('.canvas').exists()).toBe(false)
@@ -166,8 +166,8 @@ describe('NoteEditor — feedback & to-dos', () => {
     clearProgress()
   })
 
-  it('renders the feedback callout when feedback exists', () => {
-    const { pinia, page } = setup()
+  it('renders the feedback callout when feedback exists', async () => {
+    const { pinia, page } = await setup()
     setLiveScores({ [page.id]: { score: 50, feedback: 'Nice, explain why it works', todos: [] } })
     const wrapper = mountEditor(page, pinia)
 
@@ -176,15 +176,15 @@ describe('NoteEditor — feedback & to-dos', () => {
     wrapper.unmount()
   })
 
-  it('does not render a callout when there is no feedback', () => {
-    const { pinia, page } = setup()
+  it('does not render a callout when there is no feedback', async () => {
+    const { pinia, page } = await setup()
     const wrapper = mountEditor(page, pinia)
     expect(wrapper.find('.feedback-callout').exists()).toBe(false)
     wrapper.unmount()
   })
 
-  it('hides the callout when showFeedback is turned off', () => {
-    const { pinia, store, page } = setup()
+  it('hides the callout when showFeedback is turned off', async () => {
+    const { pinia, store, page } = await setup()
     setLiveScores({ [page.id]: { score: 50, feedback: 'Some feedback' } })
     store.setShowFeedback(false)
     const wrapper = mountEditor(page, pinia)
@@ -193,8 +193,8 @@ describe('NoteEditor — feedback & to-dos', () => {
     wrapper.unmount()
   })
 
-  it('shows the Create to-dos button only when todos exist', () => {
-    const { pinia, page } = setup()
+  it('shows the Create to-dos button only when todos exist', async () => {
+    const { pinia, page } = await setup()
     setLiveScores({ [page.id]: { score: 50, feedback: 'x', todos: ['Add a worked example'] } })
     const wrapper = mountEditor(page, pinia)
 
@@ -203,7 +203,7 @@ describe('NoteEditor — feedback & to-dos', () => {
   })
 
   it('creates a tick-box text box at the top of the page from todos', async () => {
-    const { pinia, store, page } = setup()
+    const { pinia, store, page } = await setup()
     setLiveScores({
       [page.id]: { score: 50, feedback: 'x', todos: ['Add an example', 'Explain why'] }
     })
@@ -221,7 +221,7 @@ describe('NoteEditor — feedback & to-dos', () => {
   })
 
   it('shifts existing boxes down when adding to-dos at the top', async () => {
-    const { pinia, store, page } = setup()
+    const { pinia, store, page } = await setup()
     const existing = store.addTextBox(page.id, { x: 10, y: 10, text: 'Existing note' })!
     setLiveScores({ [page.id]: { score: 50, feedback: 'x', todos: ['One'] } })
     const wrapper = mountEditor(page, pinia)

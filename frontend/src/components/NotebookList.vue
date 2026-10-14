@@ -48,6 +48,8 @@ async function startRename(nb: Notebook) {
 async function commitRename(nb: Notebook) {
   if (editingId.value !== nb.id) return
   const next = draftTitle.value.trim()
+  // Leave edit mode immediately; saving to the server must not keep the input open.
+  editingId.value = null
   // Ignore blank input — keep the previous title.
   if (next && next !== nb.title) {
     emit('rename', nb.id, next)
@@ -57,7 +59,6 @@ async function commitRename(nb: Notebook) {
       /* non-fatal */
     })
   }
-  editingId.value = null
 }
 
 function cancelRename() {

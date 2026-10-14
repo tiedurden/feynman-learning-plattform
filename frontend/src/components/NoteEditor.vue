@@ -511,7 +511,7 @@ function onDragUp() {
  */
 async function saveTitleChange() {
   if (props.page) {
-    store.updatePage(props.page.id, { title })
+    store.updatePage(props.page.id, { title: title.value })
     await store.savePage(props.page.id).catch(() => {
       /* non-fatal */
     })

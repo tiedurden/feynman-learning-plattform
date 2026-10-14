@@ -45,6 +45,8 @@ interface State {
   loaded: boolean
   saving: boolean
   error: string | null
+  /** Notebook whose reference PDF is currently uploading/removing. */
+  pdfBusyNotebookId: string | null
 
   // UI preferences
   showProgress: boolean
@@ -60,6 +62,7 @@ export const useNotesStore = defineStore('notes', {
       loaded: false,
       saving: false,
       error: null,
+      pdfBusyNotebookId: null,
       showProgress: loadShowProgress(),
       showFeedback: loadShowFeedback()
     }

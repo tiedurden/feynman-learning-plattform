@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
+import { createPinia } from 'pinia'
 import NotebookList from '@/components/NotebookList.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import type { Notebook } from '@/types'
@@ -13,6 +14,7 @@ const notebooks: Notebook[] = [
 function mountList(props: Record<string, unknown> = {}) {
   return mount(NotebookList, {
     props: { notebooks, activeId: 'nb-1', ...props },
+    global: { plugins: [createPinia()] },
     attachTo: document.body
   })
 }
