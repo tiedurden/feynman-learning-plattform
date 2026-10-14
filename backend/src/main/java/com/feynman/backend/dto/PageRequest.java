@@ -13,6 +13,7 @@ public record PageRequest(
         @NotBlank String title,
         String content,
         Integer order,
-        List<TextBoxPayload> boxes
+        List<TextBoxPayload> boxes,
+        List<PageImagePayload> images
 ) {
 }

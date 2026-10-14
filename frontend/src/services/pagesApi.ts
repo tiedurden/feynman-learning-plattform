@@ -1,5 +1,5 @@
-import { apiJson } from './httpClient'
-import type { Page, PageRequest } from '@/types'
+import { apiFetch, apiJson } from './httpClient'
+import type { Page, PageImage, PageRequest } from '@/types'
 
 /**
  * Bulk load all pages owned by the authenticated user across all notebooks.
@@ -41,6 +41,39 @@ export async function updatePage(id: string, request: PageRequest): Promise<Page
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
   })
+}
+
+/** Upload an image file for a page at the given canvas position. */
+export async function uploadPageImage(
+  pageId: string,
+  file: File,
+  x: number,
+  y: number
+): Promise<PageImage> {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('x', String(x))
+  formData.append('y', String(y))
+
+  const res = await apiFetch(`/api/pages/${pageId}/images`, {
+    method: 'POST',
+    body: formData
+  })
+  if (!res.ok) {
+    const problem = await res.json().catch(() => undefined)
+    throw new Error(problem?.detail ?? `Image upload failed: ${res.status} ${res.statusText}`)
+  }
+  return (await res.json()) as PageImage
+}
+
+/** Fetch image bytes using the authenticated API client. */
+export async function fetchPageImage(imageId: string): Promise<Blob> {
+  const res = await apiFetch(`/api/images/${imageId}`, { method: 'GET' })
+  if (!res.ok) {
+    const problem = await res.json().catch(() => undefined)
+    throw new Error(problem?.detail ?? `Image download failed: ${res.status} ${res.statusText}`)
+  }
+  return res.blob()
 }
 
 /**

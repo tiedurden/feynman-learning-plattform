@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { Notebook, NotebookTree, Page, PageNode, TextBox, TextReference, NotebookRequest, PageRequest, TextBoxPayload, TextReferencePayload } from '@/types'
+import type { Notebook, NotebookTree, Page, PageImage, PageNode, TextBox, TextReference, NotebookRequest, PageRequest, TextBoxPayload, TextReferencePayload } from '@/types'
 import * as notebooksApi from '@/services/notebooksApi'
 import * as pagesApi from '@/services/pagesApi'
 import { sanitizeBoxHtml } from '@/utils/sanitizeHtml'
@@ -199,7 +199,8 @@ export const useNotesStore = defineStore('notes', {
               end: ref.end,
               targetPageId: ref.targetPageId
             })) as TextReferencePayload[]
-          })) as TextBoxPayload[]
+          })) as TextBoxPayload[],
+          images: (page.images ?? []).map(({ id, x, y }) => ({ id, x, y }))
         }
         const updated = await pagesApi.updatePage(pageId, payload)
         // Reconcile: replace local page with server response
@@ -611,7 +612,44 @@ export const useNotesStore = defineStore('notes', {
       if (page?.boxes) {
         page.boxes = page.boxes.filter((b) => b.id !== boxId)
       }
+    },
+
+    /** Upload an image for a page and add its returned metadata to local state. */
+    async uploadPageImage(pageId: string, file: File, x: number, y: number): Promise<PageImage> {
+      this.saving = true
+      this.error = null
+      try {
+        const image = await pagesApi.uploadPageImage(pageId, file, x, y)
+        const page = this.pages.find((candidate) => candidate.id === pageId)
+        if (!page) {
+          throw new Error('The page was removed before the image upload completed.')
+        }
+        page.images ??= []
+        page.images.push(image)
+        return image
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to upload image'
+        throw err
+      } finally {
+        this.saving = false
+      }
+    },
+
+    /** Update an image position locally; savePage persists it. */
+    updatePageImage(pageId: string, imageId: string, patch: Partial<Pick<PageImage, 'x' | 'y'>>) {
+      const page = this.pages.find((candidate) => candidate.id === pageId)
+      const image = page?.images?.find((candidate) => candidate.id === imageId)
+      if (image) {
+        Object.assign(image, patch)
+      }
+    },
+
+    /** Remove an image locally; savePage persists the removal and blob cleanup. */
+    removePageImage(pageId: string, imageId: string) {
+      const page = this.pages.find((candidate) => candidate.id === pageId)
+      if (page?.images) {
+        page.images = page.images.filter((image) => image.id !== imageId)
+      }
     }
   }
 })
-

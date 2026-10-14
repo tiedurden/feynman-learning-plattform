@@ -56,6 +56,10 @@ public class Page {
     @OrderBy("x")
     private List<TextBox> boxes = new ArrayList<>();
 
+    @OneToMany(mappedBy = "page", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("x")
+    private List<PageImage> images = new ArrayList<>();
+
     protected Page() {
         // JPA
     }
@@ -129,5 +133,9 @@ public class Page {
 
     public List<TextBox> getBoxes() {
         return boxes;
+    }
+
+    public List<PageImage> getImages() {
+        return images;
     }
 }

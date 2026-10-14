@@ -18,8 +18,16 @@ Notebook (1)
       └── Page (child)
 ```
 - `Notebook { id, title, color }`
-- `Page { id, notebookId, parentId|null, title, content, order }`
+- `Page { id, notebookId, parentId|null, title, content, order, boxes[], images[] }`
   - `children[]` is derived at runtime (`PageNode`) by `notesStore.pageTree`.
+
+## Images on pages
+
+Use **Add image** in the page editor to upload a PNG, JPEG, or WebP image (up to
+10 MB). The image is stored with its page and initially appears in the visible
+center of the canvas. Drag it to reposition it; use the × control to remove it.
+Uploaded images are served through the authenticated API and are not embedded
+in text-box HTML.
 
 ## Getting started
 ```bash
@@ -51,4 +59,3 @@ src/
 2. **Persistence** — mock data persisted to `localStorage`; replace with a
    REST/GraphQL backend later. `notesStore.resetToSeed()` restores defaults.
 3. Keep all frontend code in this `frontend/` folder.
-
