@@ -72,8 +72,20 @@ export interface Page {
   content: string
   /** Free-positioned text boxes placed on the page canvas. */
   boxes: TextBox[]
+  /** Uploaded images placed on the page canvas. */
+  images?: PageImage[]
   /** Sort order among siblings. */
   order: number
+}
+
+/** An uploaded image positioned on a page canvas. */
+export interface PageImage {
+  id: string
+  fileName: string
+  contentType: string
+  size: number
+  x: number
+  y: number
 }
 
 /**
@@ -106,6 +118,14 @@ export interface PageRequest {
   content: string
   order?: number
   boxes?: TextBoxPayload[]
+  images?: PageImagePayload[]
+}
+
+/** Position of a previously uploaded page image in page save requests. */
+export interface PageImagePayload {
+  id: string
+  x: number
+  y: number
 }
 
 /** Payload for a TextBox in page save requests/responses. */
@@ -151,4 +171,3 @@ export interface VoiceHistoryMessage {
   role: 'user' | 'assistant'
   text: string
 }
-

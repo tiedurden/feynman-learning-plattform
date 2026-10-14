@@ -10,6 +10,7 @@ public record PageResponse(
         String title,
         String content,
         int order,
-        List<TextBoxPayload> boxes
+        List<TextBoxPayload> boxes,
+        List<PageImageResponse> images
 ) {
 }

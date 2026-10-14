@@ -31,10 +31,10 @@ describe('progressStore.evaluate — request scoping', () => {
 
   it('single-page mode uploads only the target page and forwards its pageId', async () => {
     const notes = useNotesStore()
-    const nb = notes.addNotebook('Study')
-    const parent = notes.addPage(nb.id, null, 'Parent')
-    const child = notes.addPage(nb.id, parent.id, 'Child')
-    notes.addPage(nb.id, parent.id, 'Sibling')
+    const nb = await notes.addNotebook('Study')
+    const parent = await notes.addPage(nb.id, null, 'Parent')
+    const child = await notes.addPage(nb.id, parent.id, 'Child')
+    await notes.addPage(nb.id, parent.id, 'Sibling')
 
     const progress = useProgressStore()
     await progress.evaluate({ notebookId: nb.id, pageId: child.id })
@@ -52,8 +52,8 @@ describe('progressStore.evaluate — request scoping', () => {
 
   it('single-page mode infers the owning notebook when notebookId is omitted', async () => {
     const notes = useNotesStore()
-    const nb = notes.addNotebook('Study')
-    const page = notes.addPage(nb.id, null, 'Solo')
+    const nb = await notes.addNotebook('Study')
+    const page = await notes.addPage(nb.id, null, 'Solo')
 
     const progress = useProgressStore()
     await progress.evaluate({ pageId: page.id })
@@ -66,11 +66,11 @@ describe('progressStore.evaluate — request scoping', () => {
 
   it('notebook mode uploads every page of that notebook and no pageId', async () => {
     const notes = useNotesStore()
-    const target = notes.addNotebook('Target')
-    const other = notes.addNotebook('Other')
-    const p1 = notes.addPage(target.id, null, 'One')
-    const p2 = notes.addPage(target.id, p1.id, 'Two')
-    notes.addPage(other.id, null, 'Elsewhere')
+    const target = await notes.addNotebook('Target')
+    const other = await notes.addNotebook('Other')
+    const p1 = await notes.addPage(target.id, null, 'One')
+    const p2 = await notes.addPage(target.id, p1.id, 'Two')
+    await notes.addPage(other.id, null, 'Elsewhere')
 
     const progress = useProgressStore()
     await progress.evaluate({ notebookId: target.id })
@@ -97,8 +97,8 @@ describe('progressStore.evaluate — request scoping', () => {
 
   it('records lastEvaluatedAt on success and surfaces errors on failure', async () => {
     const notes = useNotesStore()
-    const nb = notes.addNotebook('Study')
-    const page = notes.addPage(nb.id, null, 'Solo')
+    const nb = await notes.addNotebook('Study')
+    const page = await notes.addPage(nb.id, null, 'Solo')
     const progress = useProgressStore()
 
     await progress.evaluate({ pageId: page.id })

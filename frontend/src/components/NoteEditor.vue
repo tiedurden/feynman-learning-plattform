@@ -2,8 +2,10 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { Page, TextBox } from '@/types'
 import { useNotesStore } from '@/stores/notesStore'
+import * as pagesApi from '@/services/pagesApi'
 import { getFeedback, getTodos, scoreVersion } from '@/utils/progress'
 import TextBoxItem from './TextBoxItem.vue'
+import PageImageItem from './PageImageItem.vue'
 import FormatMenu from './FormatMenu.vue'
 import ReferenceModal from './ReferenceModal.vue'
 import RefTooltip from './RefTooltip.vue'
@@ -102,15 +104,51 @@ interface DraftBox extends TextBox {
 
 const drafts = ref<DraftBox[]>([])
 const canvasRef = ref<HTMLElement | null>(null)
+const imageInputRef = ref<HTMLInputElement | null>(null)
+const imageUrls = ref<Record<string, string>>({})
+const imageUploadBusy = ref(false)
 
 const savedBoxes = computed<TextBox[]>(() => props.page?.boxes ?? [])
+const savedImages = computed(() => props.page?.images ?? [])
 const isEmpty = computed(
-  () => savedBoxes.value.length === 0 && drafts.value.length === 0
+  () => savedBoxes.value.length === 0 && savedImages.value.length === 0 && drafts.value.length === 0
 )
 
 function localId(): string {
   return `draft-${Math.random().toString(36).slice(2, 9)}`
 }
+
+watch(
+  () => `${props.page?.id ?? ''}:${savedImages.value.map((image) => image.id).join(',')}`,
+  async (_key, _oldKey, onCleanup) => {
+    let cancelled = false
+    const createdUrls: string[] = []
+    imageUrls.value = {}
+    onCleanup(() => {
+      cancelled = true
+      createdUrls.forEach((url) => URL.revokeObjectURL(url))
+    })
+
+    const pageImages = [...savedImages.value]
+    await Promise.all(pageImages.map(async (image) => {
+      try {
+        const blob = await pagesApi.fetchPageImage(image.id)
+        const url = URL.createObjectURL(blob)
+        if (cancelled) {
+          URL.revokeObjectURL(url)
+          return
+        }
+        createdUrls.push(url)
+        imageUrls.value = { ...imageUrls.value, [image.id]: url }
+      } catch (err) {
+        if (!cancelled) {
+          store.error = err instanceof Error ? err.message : `Failed to load image ${image.fileName}`
+        }
+      }
+    }))
+  },
+  { immediate: true }
+)
 
 /**
  * A rich-text box counts as "blank" when it has no visible text and no
@@ -287,6 +325,8 @@ function onRefHover(payload: { pageId: string; rect: DOMRect } | null) {
 
 onBeforeUnmount(() => {
   window.removeEventListener('mousedown', onOutsideMenuClick, true)
+  window.removeEventListener('mousemove', onImageDragMove)
+  window.removeEventListener('mouseup', onImageDragUp)
 })
 
 // Switching pages clears any pending (unsaved) drafts.
@@ -318,6 +358,75 @@ function onCanvasMousedown(e: MouseEvent) {
   const x = e.clientX - rect.left + canvas.scrollLeft
   const y = e.clientY - rect.top + canvas.scrollTop
   drafts.value.push({ id: localId(), x, y, text: '', draft: true })
+}
+
+async function onImageUploadChange(event: Event) {
+  const input = event.target
+  if (!(input instanceof HTMLInputElement)) return
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file || !props.page || !canvasRef.value) return
+
+  const canvas = canvasRef.value
+  const x = Math.max(0, canvas.scrollLeft + (canvas.clientWidth - 280) / 2)
+  const y = Math.max(0, canvas.scrollTop + (canvas.clientHeight - 200) / 2)
+  imageUploadBusy.value = true
+  try {
+    await store.uploadPageImage(props.page.id, file, x, y)
+  } catch {
+    // The store exposes the upload error in the shared application alert.
+  } finally {
+    imageUploadBusy.value = false
+  }
+}
+
+interface ImageDragState {
+  imageId: string
+  offsetX: number
+  offsetY: number
+}
+let imageDrag: ImageDragState | null = null
+
+function onImageDragStart(imageId: string, e: MouseEvent) {
+  if (e.button !== 0 || !canvasRef.value) return
+  e.preventDefault()
+  const image = savedImages.value.find((candidate) => candidate.id === imageId)
+  const rect = canvasRef.value.getBoundingClientRect()
+  if (!image) return
+  imageDrag = {
+    imageId,
+    offsetX: e.clientX - rect.left + canvasRef.value.scrollLeft - image.x,
+    offsetY: e.clientY - rect.top + canvasRef.value.scrollTop - image.y
+  }
+  window.addEventListener('mousemove', onImageDragMove)
+  window.addEventListener('mouseup', onImageDragUp)
+}
+
+function onImageDragMove(e: MouseEvent) {
+  if (!imageDrag || !props.page || !canvasRef.value) return
+  const rect = canvasRef.value.getBoundingClientRect()
+  const x = Math.max(0, e.clientX - rect.left + canvasRef.value.scrollLeft - imageDrag.offsetX)
+  const y = Math.max(0, e.clientY - rect.top + canvasRef.value.scrollTop - imageDrag.offsetY)
+  store.updatePageImage(props.page.id, imageDrag.imageId, { x, y })
+}
+
+function onImageDragUp() {
+  if (props.page && imageDrag) {
+    store.savePage(props.page.id).catch(() => {
+      /* non-fatal: error already set in store */
+    })
+  }
+  imageDrag = null
+  window.removeEventListener('mousemove', onImageDragMove)
+  window.removeEventListener('mouseup', onImageDragUp)
+}
+
+function removeImage(imageId: string) {
+  if (!props.page) return
+  store.removePageImage(props.page.id, imageId)
+  store.savePage(props.page.id).catch(() => {
+    /* non-fatal: error already set in store */
+  })
 }
 
 function onDraftText(draft: DraftBox, value: string) {
@@ -402,7 +511,7 @@ function onDragUp() {
  */
 async function saveTitleChange() {
   if (props.page) {
-    store.updatePage(props.page.id, { title })
+    store.updatePage(props.page.id, { title: title.value })
     await store.savePage(props.page.id).catch(() => {
       /* non-fatal */
     })
@@ -423,6 +532,22 @@ async function saveTitleChange() {
       />
       <div class="meta">
         <span>Click anywhere below to add a text box</span>
+        <button
+          class="image-upload-button"
+          type="button"
+          :disabled="imageUploadBusy"
+          @click="imageInputRef?.click()"
+        >
+          {{ imageUploadBusy ? 'Uploading…' : 'Add image' }}
+        </button>
+        <input
+          ref="imageInputRef"
+          class="image-file-input"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          aria-label="Choose an image to add to this page"
+          @change="onImageUploadChange"
+        />
         <ToggleSwitch
           v-if="feedback"
           v-model="showFeedback"
@@ -461,6 +586,15 @@ async function saveTitleChange() {
         <p v-if="isEmpty" class="canvas-hint">Click anywhere to start a note…</p>
 
         <!-- Persisted boxes -->
+        <PageImageItem
+          v-for="image in savedImages"
+          :key="image.id"
+          :image="image"
+          :src="imageUrls[image.id]"
+          @drag-start="onImageDragStart(image.id, $event)"
+          @remove="removeImage(image.id)"
+        />
+
         <TextBoxItem
           v-for="box in savedBoxes"
           :key="box.id"
@@ -572,6 +706,25 @@ async function saveTitleChange() {
   padding-bottom: 12px;
   margin-bottom: 16px;
 }
+.image-upload-button {
+  flex: 0 0 auto;
+  border: 1px solid var(--sidebar-border);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--text);
+  padding: 5px 10px;
+  font-size: 12px;
+}
+.image-upload-button:hover:not(:disabled) {
+  background: var(--hover);
+}
+.image-upload-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+.image-file-input {
+  display: none;
+}
 
 /* Model feedback callout — visually distinct from the note canvas. */
 .feedback-callout {
@@ -656,4 +809,3 @@ async function saveTitleChange() {
   margin-bottom: 12px;
 }
 </style>
-

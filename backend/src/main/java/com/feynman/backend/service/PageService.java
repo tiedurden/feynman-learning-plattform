@@ -2,10 +2,13 @@ package com.feynman.backend.service;
 
 import com.feynman.backend.dto.PageRequest;
 import com.feynman.backend.dto.PageResponse;
+import com.feynman.backend.dto.PageImagePayload;
+import com.feynman.backend.dto.PageImageResponse;
 import com.feynman.backend.dto.TextBoxPayload;
 import com.feynman.backend.dto.TextReferencePayload;
 import com.feynman.backend.entity.Notebook;
 import com.feynman.backend.entity.Page;
+import com.feynman.backend.entity.PageImage;
 import com.feynman.backend.entity.TextBox;
 import com.feynman.backend.entity.TextReference;
 import com.feynman.backend.exception.ResourceNotFoundException;
@@ -51,6 +54,7 @@ public class PageService {
         Page page = new Page(notebook, parent, request.title(), order);
         page.setContent(request.content());
         applyBoxes(page, userId, request.boxes());
+        applyImages(page, request.images());
         return toResponse(pageRepository.saveAndFlush(page));
     }
 
@@ -67,6 +71,7 @@ public class PageService {
             page.setOrderIndex(request.order());
         }
         applyBoxes(page, userId, request.boxes());
+        applyImages(page, request.images());
         return toResponse(pageRepository.saveAndFlush(page));
     }
 
@@ -196,6 +201,38 @@ public class PageService {
         }
     }
 
+    private void applyImages(Page page, List<PageImagePayload> imagePayloads) {
+        if (imagePayloads == null) {
+            imagePayloads = List.of();
+        }
+        var incomingIds = imagePayloads.stream()
+                .map(PageImagePayload::id)
+                .filter(id -> id != null && !id.isBlank())
+                .map(UUID::fromString)
+                .collect(java.util.stream.Collectors.toSet());
+        page.getImages().removeIf(image -> !incomingIds.contains(image.getId()));
+        var existingMap = page.getImages().stream()
+                .collect(java.util.stream.Collectors.toMap(PageImage::getId, image -> image));
+        for (PageImagePayload payload : imagePayloads) {
+            if (payload == null || payload.id() == null || payload.id().isBlank()) {
+                continue;
+            }
+            if (!Double.isFinite(payload.x()) || !Double.isFinite(payload.y())
+                    || payload.x() < 0 || payload.y() < 0) {
+                throw new IllegalArgumentException("Image position must be a non-negative finite value");
+            }
+            try {
+                PageImage image = existingMap.get(UUID.fromString(payload.id()));
+                if (image != null) {
+                    image.setX(payload.x());
+                    image.setY(payload.y());
+                }
+            } catch (IllegalArgumentException e) {
+                // Ignore invalid or foreign image ids; only images already on this page are mutable.
+            }
+        }
+    }
+
     private PageResponse toResponse(Page page) {
         List<TextBoxPayload> boxes = new ArrayList<>();
         for (TextBox box : page.getBoxes()) {
@@ -205,6 +242,15 @@ public class PageService {
                     .toList();
             boxes.add(new TextBoxPayload(box.getId().toString(), box.getX(), box.getY(), box.getWidth(), box.getText(), refs));
         }
+        List<PageImageResponse> images = page.getImages().stream()
+                .map(image -> new PageImageResponse(
+                        image.getId().toString(),
+                        image.getFileName(),
+                        image.getContentType(),
+                        image.getSize(),
+                        image.getX(),
+                        image.getY()))
+                .toList();
         return new PageResponse(
                 page.getId().toString(),
                 page.getNotebook().getId().toString(),
@@ -212,6 +258,7 @@ public class PageService {
                 page.getTitle(),
                 page.getContent(),
                 page.getOrderIndex(),
-                boxes);
+                boxes,
+                images);
     }
 }
